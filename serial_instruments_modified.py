@@ -13,7 +13,7 @@ class serialInstrument:
     def __init__(self, asrl_num, rm, debug=False):
         self.device = asrl_num
         self.debug = debug
-        self.inst = rm.open_resource(asrl_num)
+        self.inst = rm.open_resource(asrl_num, send_end=True, delay=2.0) #the VISA resource
         self.name = self.getName()
         
     def getName(self):
@@ -88,17 +88,17 @@ class tek2024(serialInstrument):
             
 
     def status(self):############
-        return self.inst.query("STB?")
+        return self.inst.query("*STB?").strip()
 
     def wait(self):
         self.write("*OPC?")
-        tmp = self.read()
+        tmp = self.read().strip()
         while tmp != "1" and tmp != False:
             print("Waiting..." + str(tmp))
             tmp = self.read()
 
     def checkComplete(self):
-        tmp = self.inst.query("*OPC?")
+        tmp = self.inst.query("*OPC?").strip()
         while tmp != "1":
             tmp = self.inst.read()
 
@@ -108,8 +108,9 @@ class tek2024(serialInstrument):
 
     def read(self):
         return self.inst.read()
-    #change to query instead of ask
-    def ask(self, command):
+
+    
+    def query(self, command):
         return self.inst.query(command)
 
     def reset(self):
@@ -118,10 +119,13 @@ class tek2024(serialInstrument):
 
     def issueCommand(self, command, feedback, wait=True):
         self.inst.write(command)
+        print(feedback)
         if wait == True:
             self.checkComplete()
+            
 
     def set_tScale(self, s):
+        '''for window zone?  '''
         self.issueCommand("HORIZONTAL:DELAY:SCALE " + str(s),
                           "Setting timebase to " + str(s) + " s/div")
 
@@ -191,7 +195,7 @@ class tek2024(serialInstrument):
         change most Acquisition, Horizontal, Vertical, or Trigger arguments
         that affect the waveform
         """
-        num = self.ask("ACQuire:NUMACq?")
+        num = self.query("ACQuire:NUMACq?")
         while num == False:
             num = self.read()
         return int(num)
@@ -234,7 +238,7 @@ class tek2024(serialInstrument):
         if tdiv != False:
             set_div = False
             for a_tdiv in self.available_tdivs:
-                if set_div == False and float(tdiv) <= a_tdiv:
+                if set_div == False and float(tdiv) >= a_tdiv:
                      set_div = a_tdiv
         elif frequency != False:
 
@@ -245,8 +249,7 @@ class tek2024(serialInstrument):
 
         if set_div != False:
             self.issueCommand("HORizontal:SCAle " + str(set_div),
-                              "Setting horizontal scale to "
-                              + str(set_div) + " s/div")
+                              "Setting horizontal scale to " + str(set_div) + " s/div")
             if frequency != False and cycles != False:
                 print("Window width = " + str(set_div * 10.0) + " seconds")
         else:
@@ -313,7 +316,7 @@ class tek2024(serialInstrument):
 def get_channels_autoRange(channels, wait=True, averages=False, max_adjustments=5):
     """ Helper function to control the adjustment of multiple channels between
     captures.
-    This reduces the amount of time spend adjusting the V/div when multiple
+    This reduces the amount of time spent adjusting the V/div when multiple
     channels are used as only one re-acquisition is required between adjustments.
     """
     channels_data = [False for x in range(len(channels))]
@@ -460,20 +463,21 @@ class channel(tek2024):
         This would indicate that the V/div is set too high.
         """
         count = 0
-        for point in self.curve_raw:
-            if point > 250 or point < 5:
-                count += 1
-            else:
-                count = 0
+        if self.curve_raw != False:
+            for point in self.curve_raw:
+                if point > 250 or point < 5:
+                    count += 1
+                else:
+                     count = 0
 
-            if count > 1:
-                return True
-        return False
+                if count > 1:
+                    return True
+            return False
 
     def get_yScale(self):
         """ Ask the instrument for this channels V/div setting.
         """
-        tmp = self.ask('CH' + str(self.channel) + ':SCAle?')
+        tmp = self.query('CH' + str(self.channel) + ':SCAle?')
         return float(tmp)
 
     def get_waveform_autoRange(self, debug=False, wait=True, averages=False):
@@ -482,7 +486,7 @@ class channel(tek2024):
         This function will automatically adjust the V/div for this channel and
         keep re-requesting captures until the data fits correctly
         """
-        xs, ys = self.get_waveform(False, wait=wait)
+        xs, ys = self.get_waveform(debug, wait=wait)
         # Check if this waveform contained clipped data
         if self.did_clip():
             clipped = True
@@ -612,23 +616,37 @@ class channel(tek2024):
                           "Setting data source to channel " + str(self.channel))
         if debug:
             print("Requesting waveform setup information")
-
+        #2 Use DATa:ENCdg command to specify waveform data format
+        self.issueCommand("DATa:ENCdg ASCIi", "set waveform to ASCII format")
+        #3 Use DATa:WIDth command to specify number of bytes per data point
+        #4 use DATa:STARt and DATa:STOP commands to specify the portion
+        #of the waveform you want to transfer
+        #set start to 1 and stop to 2500 to send the entire waveform:
+        self.issueCommand("DATA:STARt 1", "Start at 1st data point")
+        self.issueCommand("DATA:STOP 2500", "Stop at last data point")
         self.write("WFMPre?")
 
         tmp = self.read()
         while tmp == False:
             tmp = self.read()
         out = tmp
+        print(out)
 
         y_offset = False
         y_mult = False
         x_incr = False
         y_zero = False
         x_num = False
+        '''
+        dl is digitizer level
+        value in YUNits =
+            ((curve_in_dl - YOFF_in_dl) * YMUlt) + YZERO_in_YUNits
+        '''
 
         out = out.split(';')
-        encoding = out[2]
-        channelStats = out[6]
+        print(out)
+        encoding = out[2] #ASC or BIN
+        channelStats = out[6] #WFID: channel num, coupling, V/div, s/div, num points, Sample mode 
         parts = channelStats.split(', ')
         # x_incr = float(parts[3].replace(' s/div',''))
         x_incr = float(out[8])
@@ -636,20 +654,27 @@ class channel(tek2024):
         y_mult = float(out[12])
         y_zero = float(out[13])
         y_offset = float(out[14])
+        '''
+        if debug:
+            print("x_incr is " + str(x_incr))
+            print("x_num is " + str(x_num))
+            print("y_mult is " + str(y_mult))
+            print("y_zero is " + str(y_zero))
+            print("y_offset is " + str(y_offset))
 
-        if y_offset == False:
+        if y_offset == False and type(y_offset) == bool:
             print()
             print("======================================================")
             print("WARNING: Y-offset parameter was not returned by scope")
             print("======================================================")
             print()
-        if y_mult == False:
+        if y_mult == False and type(y_mult) == bool):
             print()
             print("======================================================")
             print("WARNING: Y-multiplier parameter was not returned by scope")
             print("======================================================")
             print()
-        if x_incr == False:
+        if x_incr == False and type(xincr) == bool):
             print()
             print("======================================================")
             print("WARNING: X-increment parameter was not returned by scope")
@@ -657,18 +682,22 @@ class channel(tek2024):
             print()
         if y_zero == False:
             y_zero = 0
-
+            '''
+        '''
         print("Requesting waveform")
-        self.write("CURVE?")
+        self.write("CURVe?")
         out = ''
         tmp = self.read()
         while tmp == False:
             tmp = self.read()
-
+        '''
+        #tmp = self.("CURVe?", container=np.array)
         if encoding == 'BIN':
+            tmp = self.inst.inst.query_binary_values("CURV?", container=np.array)
             tmp = tmp.split('#42500')[1]
             data = np.array(unpack('>%sB' % (len(tmp)), tmp))
-        elif encoding == 'ascii':
+        elif encoding == 'ASC':
+            tmp = self.inst.inst.query_ascii_values("CURV?", container=np.array)
             out = tmp.split(":CURVE ")[1]
             data = out.split(',')
         else:
