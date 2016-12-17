@@ -8,7 +8,9 @@ This repository is for code that programs our test equipment- oscilloscpopes, fu
 ### How do I get set up? ###
 
 * Summary of set up
+Relies on pyvisa and a VISA backend, such as NI-VISA. See AK Wiki. 
 * Configuration
+Uses python 3! 
 * Dependencies
 * Database configuration
 * How to run tests
