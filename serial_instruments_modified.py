@@ -13,8 +13,9 @@ class serialInstrument:
     def __init__(self, asrl_num, rm, debug=False):
         self.device = asrl_num
         self.debug = debug
-        self.inst = rm.open_resource(asrl_num, send_end=True, delay=2.0) #the VISA resource
+        self.inst = rm.open_resource(asrl_num, send_end=True) #the VISA resource
         self.name = self.getName()
+        self.inst.values_format.container = np.array
         
     def getName(self):
         """ Returns the instruments identifier string.
@@ -101,6 +102,7 @@ class tek2024(serialInstrument):
         tmp = self.inst.query("*OPC?").strip()
         while tmp != "1":
             tmp = self.inst.read()
+            print(tmp)
 
     def write(self, command):
         # Send an arbitrary command directly to the scope
@@ -179,7 +181,7 @@ class tek2024(serialInstrument):
     def acquisition(self, enable):
         """ Sets acquisition parameter.
         Toggling this controls whether the scope acquires a waveform
-
+        (Equivalent to pressing the front-panel RUN/STOP button)
         Arguments:
         enable [bool] Toggles waveform acquisition
         """
@@ -196,8 +198,8 @@ class tek2024(serialInstrument):
         that affect the waveform
         """
         num = self.query("ACQuire:NUMACq?")
-        while num == False:
-            num = self.read()
+        #while num == False:
+         #   num = self.read()
         return int(num)
 
     def waitForAcquisitions(self, num=False):
@@ -463,16 +465,16 @@ class channel(tek2024):
         This would indicate that the V/div is set too high.
         """
         count = 0
-        if self.curve_raw != False:
-            for point in self.curve_raw:
-                if point > 250 or point < 5:
-                    count += 1
-                else:
-                     count = 0
+        #if self.curve_raw != False:
+        for point in self.curve_raw:
+            if point > 123 or point < -123:
+                count += 1
+            else:
+                count = 0
 
-                if count > 1:
-                    return True
-            return False
+            if count > 1:
+                return True
+        return False
 
     def get_yScale(self):
         """ Ask the instrument for this channels V/div setting.
@@ -599,6 +601,13 @@ class channel(tek2024):
                           False)
         self.checkComplete()
 
+    def get_waveformParams(self):
+            print("Data source is " + self.inst.query("MEASUrement:IMMed:SOUrce?"))
+            print("Starting data point is " + self.inst.query("DATA:STARt?"))
+            print("Ending data point is " + self.inst.query("DATA:STOP?"))
+            print("Data encoding is " + self.inst.query("DATA:ENCdg?"))
+            print("Data width is " + self.inst.query("DATA:WIDTH?"))
+
     def get_transferTime(self):
         return self.inst.get_transferTime(self.encoding)
 
@@ -615,15 +624,9 @@ class channel(tek2024):
         self.issueCommand("DATA:SOUrce CH" + str(self.channel),
                           "Setting data source to channel " + str(self.channel))
         if debug:
-            print("Requesting waveform setup information")
-        #2 Use DATa:ENCdg command to specify waveform data format
-        self.issueCommand("DATa:ENCdg ASCIi", "set waveform to ASCII format")
-        #3 Use DATa:WIDth command to specify number of bytes per data point
-        #4 use DATa:STARt and DATa:STOP commands to specify the portion
-        #of the waveform you want to transfer
-        #set start to 1 and stop to 2500 to send the entire waveform:
-        self.issueCommand("DATA:STARt 1", "Start at 1st data point")
-        self.issueCommand("DATA:STOP 2500", "Stop at last data point")
+            print("Requesting waveform setup information:")
+            get_waveformParams()
+            
         self.write("WFMPre?")
 
         tmp = self.read()
@@ -697,9 +700,9 @@ class channel(tek2024):
             tmp = tmp.split('#42500')[1]
             data = np.array(unpack('>%sB' % (len(tmp)), tmp))
         elif encoding == 'ASC':
-            tmp = self.inst.inst.query_ascii_values("CURV?", container=np.array)
-            out = tmp.split(":CURVE ")[1]
-            data = out.split(',')
+            data = self.inst.inst.query_ascii_values("CURV?", container=np.array)
+            #out = tmp.split(":CURVE ")[1]
+            #data = out.split(',')
         else:
             print("Error: Waveform encoding was not understood, exiting!")
             sys.exit()
@@ -728,5 +731,5 @@ class channel(tek2024):
             print("=======================================================")
             print()
 
-        return [data_x, data_y]
+        return data_x, data_y
 
