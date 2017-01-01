@@ -88,7 +88,13 @@ class tek2024(serialInstrument):
             print("Connected to: " + self.name.rstrip('\n'))
             
 
-    def status(self):############
+    def status(self):
+        '''
+        Read contents of the status byte register using Master Summary
+        Status bit. SBR records whether output is available in the Output
+        Queue, whether to oscope requests service, and whether Event Status
+        Register (SESR) has recorded any events.
+        '''
         return self.inst.query("*STB?").strip()
 
     def wait(self):
@@ -119,13 +125,50 @@ class tek2024(serialInstrument):
         # Reset the instrument
         self.inst.sendReset()
 
-    def issueCommand(self, command, feedback, wait=True):
+    def issueCommand(self, command, feedback=None, wait=True):
         self.inst.write(command)
-        print(feedback)
+        if feedback:
+            print(feedback)
         if wait == True:
             self.checkComplete()
-            
+    def setup_measurements(self):
+        '''
+        5 measurements can be taken,
+        from 4 different channels + math
+        change to suit needs:
+        '''
+        self.issueCommand('MEASU:MEAS1:SOUrce CH1')
+        self.issueCommand('MEASU:MEAS1:TYPe PK2pk')
+        self.issueCommand('MEASU:MEAS2:SOUrce CH2')
+        self.issueCommand('MEASU:MEAS2:TYPe FREQ')
+        self.issueCommand('MEASU:MEAS3:SOUrce CH3')
+        self.issueCommand('MEASU:MEAS3:TYPe PERIod')
+        self.issueCommand('MEASU:MEAS4:SOUrce CH4')
+        self.issueCommand('MEASU:MEAS4:typ maxi')
+        self.issueCommand('MEASU:MEAS5:SOUrce CH4')
+        self.issueCommand('MEASU:MEAS5:typ mini')
 
+    def setImmedMeas(self, channel, kind):
+        '''
+        The immediate measurement is not displayed on oscope and has
+        no front panel equivalent. Immed measurements are computed only when
+        requested and slow the waveform update rate less than displayed measurements
+        '''
+        self.issueCommand("MEASUrement:IMMed:SOUrce1 CH"+ str(channel))
+        self.issueCommand("MEASUrement:IMMed:TYPe " + kind)
+
+    def getImmedMeas(self):
+        self.query("MEASUrement:IMMed:VALue?")
+
+    def trigger(self, coupling, channel, mode):
+        self.issueCommand("TRIGger:MAIn SETLevel")
+        self.issueCommand("TRIGger:MAIn SETLevel")
+        self.issueCommand("TRIGger:MAIn SETLevel")
+        self.issueCommand("TRIGger:MAIn:EDGE:COUPling " + coupling)
+        self.issueCommand("TRIGger:MAIn:EDGE:SOUrce CH" + str(channel))
+        self.issueCommand("TRIGger:MAIn:MODe " + mode)
+        self.issueCommand("ACQuire:STOPAfter SEQuence")
+        
     def set_tScale(self, s):
         '''for window zone?  '''
         self.issueCommand("HORIZONTAL:DELAY:SCALE " + str(s),
@@ -460,6 +503,9 @@ class channel(tek2024):
                           + str(setVdiv) + " V/div")
         self.y_mult = setVdiv
 
+    def set_Position(self, level):
+        self.issueCommand("CH" + str(self.channel) + ":POSition " + str(level))
+        
     def did_clip(self, debug=False):
         """ Checks to see if the last acquisition contained clipped data points.
         This would indicate that the V/div is set too high.
@@ -555,16 +601,18 @@ class channel(tek2024):
                 time.sleep(1)
                 return self.get_waveform_autoRange(averages=averages)
         return [xs, ys]
-
+    '''
     def set_measurementChannel(self):
         temp = "Setting immediate measurement source channel to CH" + str(self.channel)
-        self.issueCommand("MEASUrement:IMMed:SOUrce " + str(self.channel),
+        self.inissueCommand("MEASUrement:IMMed:SOUrce " + str(self.channel),
                           temp)
+    def trigger(self):
+        self.inst.issueCommand("TRIGger:MAIn:EDGE:COUPling DC")
+        self.inst.issueCommand("TRIGger:MAIn:EDGE:SOUrce CH" + str(self.channel))
 
     def get_measurement(self):
-        self.inst.write("MEASUrement:IMMed:VALue")
-        self.inst.read()
-
+        self.inst.query("MEASUrement:IMMed:VALue?")
+    '''
     def set_waveformParams(self,
                            encoding='RPBinary',
                            start=0,
