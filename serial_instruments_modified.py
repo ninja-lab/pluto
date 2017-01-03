@@ -119,8 +119,7 @@ class tek2024(serialInstrument):
 
     
     def query(self, command):
-        return self.inst.query(command)
-
+        return self.inst.query(command).strip()
     def reset(self):
         # Reset the instrument
         self.inst.sendReset()
@@ -158,7 +157,7 @@ class tek2024(serialInstrument):
         self.issueCommand("MEASUrement:IMMed:TYPe " + kind)
 
     def getImmedMeas(self):
-        self.query("MEASUrement:IMMed:VALue?")
+        return self.query("MEASUrement:IMMed:VALue?")
 
     def trigger(self, coupling, channel, mode):
         self.issueCommand("TRIGger:MAIn SETLevel")
@@ -673,14 +672,14 @@ class channel(tek2024):
                           "Setting data source to channel " + str(self.channel))
         if debug:
             print("Requesting waveform setup information:")
-            get_waveformParams()
+            self.get_waveformParams()
             
-        self.write("WFMPre?")
+        out = self.query("WFMPre?")
 
-        tmp = self.read()
-        while tmp == False:
-            tmp = self.read()
-        out = tmp
+        #tmp = self.read()
+        #while tmp == False:
+        #    tmp = self.read()
+        #out = tmp
         print(out)
 
         y_offset = False
@@ -742,17 +741,23 @@ class channel(tek2024):
         while tmp == False:
             tmp = self.read()
         '''
-        #tmp = self.("CURVe?", container=np.array)
+        print("Requesting waveform") 
+        tmp = self.query("CURVE?")
+        #out = ''
+        #tmp = self.read()
+        #while tmp == False:
+        #    tmp = self.read()
+
         if encoding == 'BIN':
-            tmp = self.inst.inst.query_binary_values("CURV?", container=np.array)
-            tmp = tmp.split('#42500')[1]
-            data = np.array(unpack('>%sB' % (len(tmp)), tmp))
-        elif encoding == 'ASC':
-            data = self.inst.inst.query_ascii_values("CURV?", container=np.array)
-            #out = tmp.split(":CURVE ")[1]
-            #data = out.split(',')
+            #4 digits follow: 2500 but length might not be full 2500
+            #the 2500 represents the number of 8bit chars that follow
+            tmp = tmp.split('#42500')[1] #see page 2-13 in manual about block arguments
+            data = np.array(unpack('>%sB' % (len(tmp)), tmp)) #format string in struct module
+        elif encoding == 'ascii':
+            out = tmp.split(":CURVE ")[1]
+            data = out.split(',')
         else:
-            print("Error: Waveform encoding was not understood, exiting!")
+            print ("Error: Waveform encoding was not understood, exiting!")
             sys.exit()
 
         self.curve_raw = data
