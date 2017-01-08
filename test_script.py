@@ -31,51 +31,40 @@ print('Channel 1 mean is: ' + tek.getImmedMeas() )
 tek.setImmedMeas(1, "FREQ")
 print('Channel 1 frequency is: ' + tek.getImmedMeas() )
 
-      
 print('The oscilloscope status byte is: ' + tek.status())
 print('It should be zero')
 '''
-This works for ascii:
-tek.issueCommand('DATa:ENCdg ASCII')
-stuff = tek.query("CURVe?")
-plt.plot([float(el) for el in stuff.split(',')])
-plt.show()
-'''
-
+#Show ascii transfer format
+ch1.set_waveformParams(encoding='ASCII', stop = 800, width=1)
+data_x, data_y = ch1.get_waveform()
 
 #tek.inst.flush(visa.constants.VI_IO_OUT_BUF)
 #tek.inst.flush(visa.constants.VI_IO_IN_BUF)
-ch1.set_waveformParams(stop = 800, width=1)
-out = tek.query("WFMPre?")
-
-'''
-dl is digitizer level
-value in YUNits =
-    ((curve_in_dl - YOFF_in_dl) * YMUlt) + YZERO_in_YUNits
-'''
-
-out = out.split(';')
-print(out)
-encoding = out[2] #ASC or BIN
-channelStats = out[6] #WFID: channel num, coupling, V/div, s/div, num points, Sample mode 
-parts = channelStats.split(', ')
-# x_incr = float(parts[3].replace(' s/div',''))
-x_incr = float(out[8])
-x_num = int(parts[4].replace(' points',''))
-y_mult = float(out[12])
-y_zero = float(out[13])
-y_offset = float(out[14])
-stuff = tek.inst.query_binary_values("CURVe?", 'B') #format character for struct
-#module, 'B' is unsigned char, which, matches RP binary format from scope
-#width is one so byte order doesn't matter, but it could be specified (page 2-41
-#in scope manual)
-data_y = [((int(x) - y_offset) * y_mult) + y_zero for x in stuff]
-data_x = [x * x_incr for x in range(len(data_y))]
-#data_x, data_y = ch1.get_waveform()
 
 print(type(data_x))
 print(type(data_y))
 plt.plot(data_x, data_y)
 plt.show()
+'''
+#Now show binary transfer format
+ch1.set_waveformParams(stop = 800, width=1)#default encoding is RPBinary
+data_x, data_y = ch1.get_waveform(debug=True)
+#need to experiment with other containers
+print(type(data_x))
+print(type(data_y))
+plt.plot(data_x, data_y)
+plt.show()
+
+print('measurement 1 is:')
+print(tek.getMeas(1))
+print('measurement 2 is:')
+print(tek.getMeas(2))
+
 tek.query("ALLEV?")
 
+'''
+format character for struct module, 'B' is unsigned char, which, 
+matches RP binary format from scope. width is one so byte order 
+doesn't matter, but it could be specified (page 2-41 in scope manual) 
+'''
+    
