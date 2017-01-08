@@ -1,37 +1,9 @@
-import os, sys, time #, serial
+import time
 import numpy as np
-#from struct import unpack
+import serialInstrument
 import copy
 
-class serialInstrument:
-    """ The base class for a serial instrument.
-    Extend this class to implement other instruments with a serial interface.
-    """
-    prevCommand = ''
-    debug = False
-
-    def __init__(self, asrl_num, rm, debug=False):
-        self.device = asrl_num
-        self.debug = debug
-        self.inst = rm.open_resource(asrl_num, send_end=True) #the VISA resource
-        self.name = self.getName()
-        self.inst.values_format.container = np.array
-        
-    def getName(self):
-        """ Returns the instruments identifier string.
-        This is a fairly universal command so should work on most devices.
-        """
-        return self.inst.query("*IDN?")
-
-    def sendReset(self):
-        """ Resets the instrument.
-        This is a fairly universal command so should work on most devices.
-        """
-        print("Resetting machine")
-        self.inst.write("*RST")
-
-
-class tek2024(serialInstrument):
+class tek2024(serialInstrument.serialInstrument):
     """ The class for the Tektronix TPS2024 oscilloscope
     This class is responsible for any functionality not specific to a
     particular channel, e.g. horizontal scale adjustment.
