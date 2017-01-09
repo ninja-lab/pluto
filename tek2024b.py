@@ -7,6 +7,10 @@ class tek2024(serialInstrument.serialInstrument):
     """ The class for the Tektronix TPS2024 oscilloscope
     This class is responsible for any functionality not specific to a
     particular channel, e.g. horizontal scale adjustment.
+    
+    TO DO 
+    the status byte register MAV (message available) bit tells you
+    if message is in the output queue
     """
 
     x_incr = False
@@ -67,7 +71,7 @@ class tek2024(serialInstrument.serialInstrument):
         Queue, whether to oscope requests service, and whether Event Status
         Register (SESR) has recorded any events.
         '''
-        return self.inst.query("*STB?").strip()
+        return self.query("*STB?").strip()
 
     def wait(self):
         self.write("*OPC?")
@@ -77,28 +81,18 @@ class tek2024(serialInstrument.serialInstrument):
             tmp = self.read()
 
     def checkComplete(self):
-        tmp = self.inst.query("*OPC?").strip()
+        tmp = self.query("*OPC?").strip()
         while tmp != "1":
             tmp = self.inst.read()
             print(tmp)
         
 
-    def write(self, command):
-        # Send an arbitrary command directly to the scope
-        self.inst.write(command)
-
-    def read(self):
-        return self.inst.read()
-
-    
-    def query(self, command):
-        return self.inst.query(command).strip()
     def reset(self):
         # Reset the instrument
-        self.inst.sendReset()
+        self.sendReset()
 
     def issueCommand(self, command, feedback=None, wait=True):
-        self.inst.write(command)
+        self.write(command)
         if feedback:
             print(feedback)
         if wait == True:
@@ -606,18 +600,7 @@ class channel(tek2024):
                 time.sleep(1)
                 return self.get_waveform_autoRange(averages=averages)
         return [xs, ys]
-    '''
-    def set_measurementChannel(self):
-        temp = "Setting immediate measurement source channel to CH" + str(self.channel)
-        self.inissueCommand("MEASUrement:IMMed:SOUrce " + str(self.channel),
-                          temp)
-    def trigger(self):
-        self.inst.issueCommand("TRIGger:MAIn:EDGE:COUPling DC")
-        self.inst.issueCommand("TRIGger:MAIn:EDGE:SOUrce CH" + str(self.channel))
-
-    def get_measurement(self):
-        self.inst.query("MEASUrement:IMMed:VALue?")
-    '''
+  
     def set_waveformParams(self,
                            encoding='RPBinary',
                            start=0,

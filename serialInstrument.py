@@ -27,4 +27,13 @@ class serialInstrument:
         print("Resetting machine")
         self.inst.write("*RST")
 
+    def query(self, command):
+        return self.inst.query(command).strip()
 
+    def write(self, command):
+        # Send an arbitrary command directly to the scope
+        self.inst.write(command)
+
+    def read(self):
+        return self.inst.read()
+    
