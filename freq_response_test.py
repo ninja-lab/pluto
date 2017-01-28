@@ -1,11 +1,11 @@
 import tek2024b
 import Agilent33120
-import visa
+import pyvisa
 import time
 import matplotlib.pyplot as plt
 from math import log10
 
-rm = visa.ResourceManager()
+rm = pyvisa.ResourceManager()
 print(rm.list_resources())
 
 func_gen = Agilent33120.f33120a(rm.list_resources()[3], rm)

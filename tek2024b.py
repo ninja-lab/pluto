@@ -1,9 +1,9 @@
 import time
 import numpy as np
-import serialInstrument
+import Visa_Instrument
 import copy
 
-class tek2024(serialInstrument.serialInstrument):
+class tek2024(Visa_Instrument.Visa_Instrument):
     """ The class for the Tektronix TPS2024 oscilloscope
     This class is responsible for any functionality not specific to a
     particular channel, e.g. horizontal scale adjustment.
@@ -111,17 +111,17 @@ class tek2024(serialInstrument.serialInstrument):
         time.sleep(.2)
         self.issueCommand('MEASU:MEAS2:TYPe FREQ')
         time.sleep(.2)
-        self.issueCommand('MEASU:MEAS3:SOUrce CH3')
+        self.issueCommand('MEASU:MEAS3:SOUrce CH2')
         time.sleep(.2)
-        self.issueCommand('MEASU:MEAS3:TYPe PERIod')
+        self.issueCommand('MEASU:MEAS3:TYPe PK2pk')
         time.sleep(.2)
         self.issueCommand('MEASU:MEAS4:SOUrce CH4')
         time.sleep(.2)
-        self.issueCommand('MEASU:MEAS4:typ maxi')
+        self.issueCommand('MEASU:MEAS4:typ PK2pk')
         time.sleep(.2)
         self.issueCommand('MEASU:MEAS5:SOUrce CH4')
         time.sleep(.2)
-        self.issueCommand('MEASU:MEAS5:typ mini')
+        self.issueCommand('MEASU:MEAS5:typ MEAN')
     def getMeas(self, meas_num):
         #scope needs to be running to take periodic measurement
         self.acquisition(True)
@@ -159,14 +159,15 @@ class tek2024(serialInstrument.serialInstrument):
     def getImmedMeas(self):
         return self.query("MEASUrement:IMMed:VALue?")
 
-    def trigger(self, coupling, channel, mode):
-        self.issueCommand("TRIGger:MAIn SETLevel")
-        self.issueCommand("TRIGger:MAIn SETLevel")
-        self.issueCommand("TRIGger:MAIn SETLevel")
+    def trigger(self, coupling, channel, mode, level=0):
+        #self.issueCommand("TRIGger:MAIn SETLevel")
+        #self.issueCommand("TRIGger:MAIn SETLevel")
+        #self.issueCommand("TRIGger:MAIn SETLevel")
         self.issueCommand("TRIGger:MAIn:EDGE:COUPling " + coupling)
-        self.issueCommand("TRIGger:MAIn:EDGE:SOUrce CH" + str(channel))
+        self.issueCommand("TRIGger:MAIn:EDGE:SOUrce "+ str(channel))
         self.issueCommand("TRIGger:MAIn:MODe " + mode)
         self.issueCommand("ACQuire:STOPAfter RUNSTop")
+        self.issueCommand("TRIGger:MAIn:LEVel " + str(level))
         
     def set_tScale(self, s):
         '''for window zone?  '''
@@ -470,9 +471,11 @@ class channel(tek2024):
                        0.05,
                        0.02]
 
-    def __init__(self, inst, channel):
+    def __init__(self, inst, channel, yunit='V', atten=10):
         self.inst = inst
         self.channel = channel
+        self.issueCommand('CH'+str(self.channel) + ':PRObe ' + str(atten))
+        self.issueCommand('CH'+str(self.channel) + ':YUNit ' + '"' + yunit + '"')
 
     def set_vScale(self, s, debug=False):
         """ Sets the V/div setting (vertical scale) for this channel

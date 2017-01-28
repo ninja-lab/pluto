@@ -10,6 +10,7 @@ class Visa_Instrument:
     def __init__(self, resource_id, rm, debug=False):
         self.device = resource_id
         self.debug = debug
+        #for resource_id in rm.li
         self.inst = rm.open_resource(resource_id, send_end=True) #the VISA resource
         self.name = self.getName()
         self.inst.values_format.container = np.array

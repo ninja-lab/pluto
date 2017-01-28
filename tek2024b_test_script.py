@@ -1,6 +1,6 @@
 import serialInstrument
 import tek2024b
-import visa
+import pyvisa
 import matplotlib.pyplot as plt
 
 '''
@@ -10,7 +10,7 @@ Setup: Function generator outputs 1 + .5*sin(2*pi*2*t)
 on oscilloscope channel 1
 '''
 
-rm = visa.ResourceManager()
+rm = pyvisa.ResourceManager()
 print(rm.list_resources())
 tek = tek2024b.tek2024(rm.list_resources()[2], rm)
 tek.inst.timeout = 20000 #20,000 milliseconds

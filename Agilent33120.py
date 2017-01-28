@@ -1,7 +1,7 @@
-import serialInstrument
+import Visa_Instrument
 import time
 
-class f33120a(serialInstrument.serialInstrument):
+class f33120a(Visa_Instrument.Visa_Instrument):
     ''' The class for the Agilent 33120a function generator
     '''
     availableShapes = ['SIN' , 'SQU' , 'TRI' , 'RAMP' , 'NOIS' , 'DC' , 'USER']
