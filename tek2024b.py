@@ -1,9 +1,10 @@
 import time
 import numpy as np
 import Visa_Instrument
+import pyvisa
 import copy
 
-class tek2024(Visa_Instrument.Visa_Instrument):
+class tek2024b(Visa_Instrument.Visa_Instrument):
     """ The class for the Tektronix TPS2024 oscilloscope
     This class is responsible for any functionality not specific to a
     particular channel, e.g. horizontal scale adjustment.
@@ -54,14 +55,17 @@ class tek2024(Visa_Instrument.Visa_Instrument):
 
     available_averageSettings = [128, 64, 16, 4]
 
-    def __init__(self, device, rm, debug=False):
-       
-        super().__init__(device, rm, debug)
-        if self.name == False:
-            print("Uh Oh! The machine on " + device + " isn't responding")
-            sys.exit()
-        else:
-            print("Connected to: " + self.name.rstrip('\n'))
+    def __init__(self, rm, debug=False):
+        
+        for resource_id in rm.list_resources():
+            try:
+                super().__init__(resource_id, rm, debug)
+                if self.query('*IDN?').strip() == 'TEKTRONIX,TPS 2024B,0,CF:91.1CT FV:v11.07':
+                    print("Connected to: " + self.name.rstrip('\n'))
+                    self.inst.timeout = 10000
+                    break
+            except pyvisa.errors.VisaIOError:
+                print(resource_id + " is not Tektronix TPS204B, continuing...\n")
             
 
     def status(self):
@@ -119,7 +123,7 @@ class tek2024(Visa_Instrument.Visa_Instrument):
         time.sleep(.2)
         self.issueCommand('MEASU:MEAS4:typ PK2pk')
         time.sleep(.2)
-        self.issueCommand('MEASU:MEAS5:SOUrce CH4')
+        self.issueCommand('MEASU:MEAS5:SOUrce CH1')
         time.sleep(.2)
         self.issueCommand('MEASU:MEAS5:typ MEAN')
     def getMeas(self, meas_num):
@@ -164,10 +168,11 @@ class tek2024(Visa_Instrument.Visa_Instrument):
         #self.issueCommand("TRIGger:MAIn SETLevel")
         #self.issueCommand("TRIGger:MAIn SETLevel")
         self.issueCommand("TRIGger:MAIn:EDGE:COUPling " + coupling)
-        self.issueCommand("TRIGger:MAIn:EDGE:SOUrce "+ str(channel))
+        self.issueCommand("TRIGger:MAIn:EDGE:SOUrce {channel}".format(channel = channel))
         self.issueCommand("TRIGger:MAIn:MODe " + mode)
         self.issueCommand("ACQuire:STOPAfter RUNSTop")
-        self.issueCommand("TRIGger:MAIn:LEVel " + str(level))
+        if mode == 'NORMal':
+            self.issueCommand("TRIGger:MAIn:LEVel " + str(level))
         
     def set_tScale(self, s):
         '''for window zone?  '''
@@ -449,7 +454,7 @@ def get_channels_autoRange(channels, wait=True, averages=False, max_adjustments=
         return channels_data
 
 
-class channel(tek2024):
+class channel(tek2024b):
     """ Channel class that implements the functionality related to one of
     the oscilloscope's physical channels.
     """

@@ -8,14 +8,16 @@ from math import log10
 rm = pyvisa.ResourceManager()
 print(rm.list_resources())
 
-func_gen = Agilent33120.f33120a(rm.list_resources()[3], rm)
+func_gen = Agilent33120.f33120a(rm)
 func_gen.displayText("'Hi Erik'")
-tek = tek2024b.tek2024(rm.list_resources()[2], rm)
+tek = tek2024b.tek2024b(rm)
 ch1 = tek2024b.channel(tek, 1)
 tek.setup_measurements()
-ch1.set_Position(0)
-ch1.set_vScale(.5)
-tek.trigger('DC', 1, 'NORMal')
+ch1.set_Position(-2)
+input_amplitude = 2.0 #pk2pk
+ch1.set_vScale(input_amplitude/2.0)
+offset = 1
+tek.trigger('DC', 1, 'NORMal', level = offset)
 tek.set_averaging(False)
 tek.setImmedMeas(1, "FREQ")
 tek.setup_measurements()
@@ -23,7 +25,7 @@ freqs = [1, 2, 5, 10, 20, 50]
 mag = [] #dB
 phase = []
 input_amplitude = 2 #pk2pk
-func_gen.applyFunction('SIN', 1, 2, 0)
+func_gen.applyFunction('SIN', 1, input_amplitude, 1)
 tek.acquisition(True)
 
 for freq in freqs:
