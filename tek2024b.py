@@ -361,7 +361,15 @@ class tek2024b(Visa_Instrument.Visa_Instrument):
         print('===================================================')
         print()
         return tmp[len(tmp) - 1]
-
+    
+    def selectChannels(self, list_of_channels):
+        for ch in list_of_channels:
+            self.write('SELect:CH{0} ON'.format(ch))
+    
+    def unselectChannels(self, list_of_channels):
+        for ch in list_of_channels:
+            self.write('SELect:CH{0} OFF'.format(ch))
+            
 
 def get_channels_autoRange(channels, wait=True, averages=False, max_adjustments=5):
     """ Helper function to control the adjustment of multiple channels between

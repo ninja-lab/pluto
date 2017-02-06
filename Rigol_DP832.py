@@ -5,8 +5,7 @@ class Rigol_DP832(Visa_Instrument.Visa_Instrument):
     
     selectedChannel = 1
     #output is turned off automatically if current exceeds the OCP level
-    i_protection_level = .1
-    
+    ocp_levels = [.1, .1, .1]
     
     def __init__(self, rm, debug=False):
         
@@ -25,9 +24,11 @@ class Rigol_DP832(Visa_Instrument.Visa_Instrument):
                 #need to close a session if it started! 
             
     
-    def apply(self, voltage, current_limit = i_protection_level, channel = 1):
+    def apply(self, voltage, current_limit, channel = 1):
+        if self.ocp_levels[channel - 1] < current_limit:
+            self.ocp_levels[channel - 1] = current_limit + .2
         #set current protection level
-        q = ':OUTPut:OCP:VALue CH{0}, {1:.1f}'.format(channel, self.i_protection_level)
+        q = ':OUTPut:OCP:VALue CH{0}, {1:.2f}'.format(channel, self.ocp_levels[channel - 1])
         #print(q)
         self.write(q)
         q =':OUTPut:OCP:STATe CH{channel}, ON'.format(channel = channel)
@@ -36,9 +37,9 @@ class Rigol_DP832(Visa_Instrument.Visa_Instrument):
         
         #apply settings, with current limit
         apply_comm = ':APPLy CH{channel}, {v_level:.1f}, {i_limit:.1f}'.format(channel = channel, v_level = voltage, i_limit = current_limit)
-        print(apply_comm)
+        #print(apply_comm)
         self.write(apply_comm)
-        self.turn_on()
+        self.turn_on(channel)
         time.sleep(1)
         #check and report back if current limiting is activated:
         q = ':OUTPut:OCP:ALAR? CH{0}'.format(channel)
@@ -46,8 +47,9 @@ class Rigol_DP832(Visa_Instrument.Visa_Instrument):
         if stat == 'YES':
             print('Caution! Output on Channel{ch_num} hit current protection level and turned off!'.format(ch_num = channel))
         actual_voltage = float(self.query(':MEASure:VOLTage:DC? CH{0}'.format(channel)))
-        print('actual voltage is {:.3f}'.format(actual_voltage))
-        if actual_voltage < voltage:
+        print('actual voltage on CH{0} is {1:.3f}'.format(channel, actual_voltage))
+        mode = self.query(':OUTPut:MODE? CH{0}'.format(channel))
+        if mode == 'CC' or mode == 'UR':
             print('Caution! Current Limiting is active!\n')
         
     
