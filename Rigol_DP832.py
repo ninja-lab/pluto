@@ -58,3 +58,11 @@ class Rigol_DP832(Visa_Instrument.Visa_Instrument):
 
     def turn_on(self, channel = 1):
         self.write(':OUTP CH{channel},ON'.format(channel = channel))
+        
+    def get_voltage(self, channel):
+        return float(self.query(':MEASure:VOLTage:DC? CH{0}'.format(channel)))
+        
+    def set_increment(self, channel, increment):
+        self.write('SOURce{channel}:VOLTage:LEVel:IMMediate:STEP:INCRement {increment}'.format(channel=channel, increment = increment))
+    def increment_up(self, channel):
+        self.write('SOURce{channel}:VOLTage:LEVel:IMMediate:AMPLitude UP'.format(channel=channel))

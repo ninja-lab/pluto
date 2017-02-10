@@ -115,13 +115,13 @@ class tek2024b(Visa_Instrument.Visa_Instrument):
         time.sleep(.2)
         self.issueCommand('MEASU:MEAS2:TYPe FREQ')
         time.sleep(.2)
-        self.issueCommand('MEASU:MEAS3:SOUrce CH2')
+        self.issueCommand('MEASU:MEAS3:SOUrce CH3')
         time.sleep(.2)
-        self.issueCommand('MEASU:MEAS3:TYPe PK2pk')
+        self.issueCommand('MEASU:MEAS3:TYPe MEAN')
         time.sleep(.2)
         self.issueCommand('MEASU:MEAS4:SOUrce CH4')
         time.sleep(.2)
-        self.issueCommand('MEASU:MEAS4:typ PK2pk')
+        self.issueCommand('MEASU:MEAS4:typ MEAN')
         time.sleep(.2)
         self.issueCommand('MEASU:MEAS5:SOUrce CH1')
         time.sleep(.2)
@@ -174,6 +174,11 @@ class tek2024b(Visa_Instrument.Visa_Instrument):
         if mode == 'NORMal':
             self.issueCommand("TRIGger:MAIn:LEVel " + str(level))
         
+    def autoTrigger(self):
+        self.issueCommand("TRIGger:MAIn:MODe AUTO")
+    def normalTrigger(self):
+        self.issueCommand("TRIGger:MAIn:MODe NORMal")
+    
     def set_tScale(self, s):
         '''for window zone?  '''
         self.issueCommand("HORIZONTAL:DELAY:SCALE " + str(s),

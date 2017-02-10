@@ -1,12 +1,10 @@
-import matplotlib.pyplot as plt
-from math import log10
-from datetime import datetime
-
+import plotting
+'''
 def generate_bode_plot(mag1, mag2, phase, freqs, quantity):
-    '''
+    
     Generates a plot with left vertical axis as magnitude, right vertical as phase,
     along log frequency horizontal axis. 
-    '''
+    
     save_loc = 'C:\\Users\\Erik\\Desktop\\PythonPlots\\'
     fig, ax1 = plt.subplots()
     ax1.set_ylim(min(mag1) - 20, max(mag1) + 20)
@@ -35,10 +33,14 @@ def generate_bode_plot(mag1, mag2, phase, freqs, quantity):
     filename = (save_loc + name + '.png').replace(' ','_')
     print(filename)
     fig.savefig(filename)
-    
+  '''  
 mag1 = [20, 20, 20, 20]
 mag2 = [10, 10, 10, 10]
+mag3 = [15, 15, 15, 15]
 phase = [0, 0, 0, 0]
 freqs = [1, 2, 5, 10]
 
-generate_bode_plot(mag1, mag2, phase, freqs, 'current')
+#plotting.generate_bode_plot([mag1, mag2, mag3], phase, freqs, ['mag1', 'mag2', 'mag3'], 'test_plot')
+L1 = [.1, .1, .12, .13, .15]
+L2 = [.09, .1, .14, .15, .16]
+plotting.generate_inductance_plot([L1, L2], [1, 2, 5, 10, 20], ['L1', 'L2'], 'inductances vs freq')
