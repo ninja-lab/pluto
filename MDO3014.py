@@ -4,7 +4,7 @@ import Visa_Instrument
 import pyvisa
 import copy
 
-class tek2024b(Visa_Instrument.Visa_Instrument):
+class MDO3014(Visa_Instrument.Visa_Instrument):
     """ The class for the Tektronix TPS2024 oscilloscope
     This class is responsible for any functionality not specific to a
     particular channel, e.g. horizontal scale adjustment.
@@ -60,7 +60,7 @@ class tek2024b(Visa_Instrument.Visa_Instrument):
         for resource_id in rm.list_resources():
             try:
                 super().__init__(resource_id, rm, debug)
-                if self.query('*IDN?').strip() == 'TEKTRONIX,TPS 2024B,0,CF:91.1CT FV:v11.07':
+                if self.query('*IDN?').strip() == 'TEKTRONIX,MDO3014,C030398,CF:91.1CT FV:v1.22':
                     print("Connected to: " + self.name.rstrip('\n'))
                     self.inst.timeout = 10000
                     break
@@ -468,7 +468,7 @@ def get_channels_autoRange(channels, wait=True, averages=False, max_adjustments=
         return channels_data
 
 
-class channel(tek2024b):
+class channel(MDO3014):
     """ Channel class that implements the functionality related to one of
     the oscilloscope's physical channels.
     """

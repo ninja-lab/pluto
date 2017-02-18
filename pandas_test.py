@@ -1,7 +1,11 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from datetime import datetime
+
 results = pd.DataFrame()
+save_loc = 'C:\\Users\\Erik\\Desktop\\PythonPlots\\'
+
 
 # sample inductances
 #L1 = np.arange(0, 20 + 2, 2)
@@ -16,9 +20,15 @@ temp['9Amps'] = L2
 temp['10Amps'] = L3
 
 results = pd.DataFrame(temp, index=freqs)
-
-axes_  = results.plot(kind='line', logx=True, title='Inductance vs Frequency')
-
+results.to_csv(path_or_buf=save_loc + 'test.csv')
+title_str = 'Inductance vs Frequency'
+axes  = results.plot(kind='line', logx=True, title=title_str)
+axes.set_xlabel('Frequency [Hz]')
+axes.set_ylabel('Inductance [H]')
+fig = plt.gcf()
 plt.show()
-
+time_stamp = datetime.now().strftime('%Y-%m-%d_%H_%M')
+name = title_str + time_stamp
+filename = (save_loc + name + '.png').replace(' ','_')
+fig.savefig(filename)
 

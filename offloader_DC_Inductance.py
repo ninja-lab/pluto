@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import Rigol_DP832
 import pandas as pd
-from get_L_vs_freq import get_L_vs_freq
+from get_L_vs_freq import get_L_at_freq
+from plotting import easy_plot
 '''
 Command a sinusoidal current, measure current amplitude and phase,
 and coil voltage amplitude and phase. Find IV relationship across frequency.
@@ -43,14 +44,14 @@ def setup_scope():
     ch1.set_vScale(.1)
     ch2.set_Position(-4)
     ch2.set_vScale(.5)
-    ch3.set_Position(-6)
+    ch3.set_Position(-10)
     ch3.set_vScale(.2)
-    ch4.set_Position(0)
-    ch4.set_vScale(.5)
+    ch4.set_Position(-40)
+    ch4.set_vScale(.2)
     tek.set_hScale(frequency = 1, cycles = 3)
     #use external SYNC from function generator to scope external trigger input
     tek.trigger('DC', 'EXT', 'NORMal', 2.5)
-    tek.set_averaging(4)
+    tek.set_averaging(False)
     tek.setImmedMeas(1, "FREQ")
     tek.setup_measurements()
     tek.acquisition(True)
@@ -64,18 +65,18 @@ def setup_dc_supply():
     dc_supply.apply(24, 3, 1)
     dc_supply.set_increment(3, .1)
     
-    #dc_supply.apply(1, .4, 3)
+
     
 setup_scope()
 setup_dc_supply()
-
-freqs = [.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0]
-
-
+dc_levels = []
+dc_Inductances = []
+freq = .2
 input_command = .2 #Vpk = 1Apk2pk
-func_gen.applyFunction('SIN', 1, input_command, 0) # 1Hz, amplitude, offset
+func_gen.applyFunction('SIN', freq, input_command, 0) # 1Hz, amplitude, offset
+tek.set_hScale(frequency = freq, cycles = 3) 
 tek.autoTrigger()
-junk = input('adjust DC bias now for around 400lb')
+junk = input('adjust DC bias now for around 7.8A')
 
 tek.normalTrigger()
 temp = {}
@@ -86,42 +87,28 @@ for i in range(9):
     #need to slow func_gen back down!!!!!
     # large distorion around 50 Hz
     #consider .5-50 Hz range and adjustable command
-    func_gen.outputFreq(1.0)
-    tek.set_hScale(frequency = 1.0, cycles = 3)
+    
     
     junk = input('adjust scaling')
     
     tek.selectedChannel = 4
     tek.setImmedMeas(4, "MEAN")
-    time.sleep(tek.get_timeToCapture(freqs[0], 4, averaging=4)[1])
+    tek.normalTrigger()
+    time.sleep(tek.get_timeToCapture(freq, 4)[1])
     dc_level_str = tek.getImmedMeas()
-    dc_level = round(float(dc_level_str),3)
-    #idc_levels.append(dc_level)
-    #legends.append('{0}Amps'.format(dc_level))
-    print('channel 4 measured mean value is {0}Apk_pk'.format(dc_level))    
-    
-    temp['{0:.1f}A'.format(float(dc_level_str))] = get_L_vs_freq(freqs, func_gen, tek) 
+    dc_levels.append(round(float(dc_level_str),3))
+    print('channel 4 measured mean value is {0}Apk_pk'.format(dc_levels[i]))    
+    tek.autoTrigger()
+    dc_Inductances.append(get_L_at_freq(.2, tek, func_gen)) 
     dc_supply.increment_up(3)
     
 
 func_gen.outputFreq(1.0)
 tek.set_hScale(frequency = 1.0, cycles = 3)
-results = pd.DataFrame(temp, index=freqs)
-save_loc = 'C:\\Users\\Erik\\Desktop\\PythonPlots\\'
-time_stamp = datetime.now().strftime('%Y-%m-%d_%H_%M')
-title_str = 'Inductance vs Frequency'
-name = title_str + time_stamp
-results.to_csv(path_or_buf=save_loc + name.replace(' ','_') +'.csv')
 
-axes  = results.plot(kind='line', logx=True, title=title_str)
-axes.set_xlabel('Frequency [Hz]')
-axes.set_ylabel('Inductance [H]')
-fig = plt.gcf()
-plt.show()
+title_str = 'Inductance vs DC (.2Hz) current'
 
-
-filename = (save_loc + name + '.png').replace(' ','_')
-fig.savefig(filename)
+easy_plot([dc_Inductances], dc_levels, ['DC Inductance'], 'DC Inductance vs (.2Hz) DC Current')
 
 
 

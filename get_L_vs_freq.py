@@ -1,20 +1,21 @@
 from math import pi
 from math import tan
+import time
 
 
-def take_current_amplitude_measurement():
+def take_current_amplitude_measurement(freq, tek):
     '''
     Current magnitudes measured by clamp on probe, tp16, and manual cursor.
     Voltage magnitudes measured by channel2, and manual cursor. 
     
     '''
-    
+    '''
     tek.selectedChannel = 4
     tek.setImmedMeas(4, "PK2pk")
-    time.sleep(tek.get_timeToCapture(freq, 4, averaging=4)[1])
+    time.sleep(tek.get_timeToCapture(freq, 4)[1])
     current_mag_val = round(float(tek.getImmedMeas()),3)
     print('channel 4 measured value is {0}Apk_pk'.format(current_mag_val))
-    
+    '''
     '''
     tek.selectedChannel = 3
     tek.setImmedMeas(3, "PK2pk")
@@ -31,22 +32,22 @@ def take_current_amplitude_measurement():
     print('channel 2 coil voltage measured value is {0}Vpk_pk'.format(coil_voltage_val))
     '''
     #take manual measurements with cursors for comparison:
-    '''
+    
     tek.selectedChannel = 4
     tek.set_hbars()
     current_val = float(input('Enter current amplitude in Amps:'))
     if current_val == 0:
         current_val = .00001
-    '''
+    
     '''
     tek.selectedChannel = 2
     tek.set_hbars()
     voltage_val = float(input('Enter coil voltage in Volts'))
     '''
-    return current_mag_val
+    return current_val
     
     
-def take_current_phase_measurement(freq):
+def take_current_phase_measurement(freq, tek):
     '''
     return phase in radians
     '''
@@ -54,11 +55,14 @@ def take_current_phase_measurement(freq):
     tek.selectedChannel = 4
     tek.set_vbars()
     #prompt user for time delay in seconds
-    current_delay = float(input("Enter time [sec] delay FROM voltage TO current: "))
+    junk =input('Place cursors to get delay FROM voltage TO current')
+    current_delay = tek.get_vbars_delta()
+    #float(input("Enter time [sec] delay FROM voltage TO current: "))
+    
     return 2*pi*current_delay*freq
 
 
-def get_L_at_freq(freq):
+def get_L_at_freq(freq, tek, func_gen):
 
     '''
     At a particuluar DC current level, sweep frequencies and measure 
@@ -71,19 +75,18 @@ def get_L_at_freq(freq):
     
     '''
     func_gen.outputFreq(freq)
-    print()
-    print('Programmed Frequency is: ' + str(freq) + 'Hz')
-    tek.set_hScale(frequency = freq, cycles = 3) 
+    print('Programmed Frequency is: ' + str(freq) + 'Hz') 
     junk = input('Adjust scaling now and then hit enter')  
-    amplitude = take_current_amplitude_measurement()
-    theta = take_current_phase_measurement(freq)
+    amplitude = take_current_amplitude_measurement(freq, tek)
+    theta = take_current_phase_measurement(freq, tek)
     return tan(theta)*amplitude/(2*pi*freq)
 
-def get_L_vs_freq(freqs):
+def get_L_vs_freq(freqs, func_gen, scope):
     '''
     return list of inductances measured at each frequency
     '''
-    return [get_L_at_freq(freq) for freq in freqs]
+    
+    return [get_L_at_freq(freq, scope, func_gen) for freq in freqs]
         
 
     

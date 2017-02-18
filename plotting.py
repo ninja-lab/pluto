@@ -68,3 +68,29 @@ def generate_inductance_plot(mags, freqs, legend_strs, title_str):
     filename = (save_loc + name + '.png').replace(' ','_')
     print(filename)
     fig.savefig(filename)
+    
+    
+def easy_plot(yvals, xvals, legend_strs, title_str):
+    save_loc = 'C:\\Users\\Erik\\Desktop\\PythonPlots\\'
+    fig, ax1 = plt.subplots()
+    colored_dashes = ['g--', 'b--', 'r--', 'k--', 'c--']
+    i = 0
+    for yval in yvals:
+        ax1.plot(xvals, yval, colored_dashes[i])
+        i = i + 1
+    
+    ax1.set_xlabel('DC Current')
+    ax1.set_ylabel('Inductance [H]', color = 'b')
+    ax1.legend(legend_strs)
+    for tl in ax1.get_yticklabels():
+        tl.set_color('b')
+
+    time_stamp = datetime.now().strftime('%Y-%m-%d_%H_%M')
+    name = title_str + time_stamp
+    print(name)
+    plt.title(name)
+    fig = plt.gcf()
+    plt.show()
+    filename = (save_loc + name + '.png').replace(' ','_')
+    print(filename)
+    fig.savefig(filename)

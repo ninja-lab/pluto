@@ -1,5 +1,5 @@
 import serialInstrument
-import tek2024b
+import MDO3014
 import pyvisa
 import matplotlib.pyplot as plt
 import Agilent33120
@@ -16,16 +16,16 @@ print(rm.list_resources())
 func_gen = Agilent33120.f33120a(rm)
 func_gen.displayText("'Hi Erik'")
 func_gen.applyFunction('SIN', 2, .5, 1)
-tek = tek2024b.tek2024b(rm)
+tek = MDO3014.MDO3014(rm)
 
 #tek.inst.timeout = 20000 #20,000 milliseconds
-ch1 = tek2024b.channel(tek, 1)
+ch1 = MDO3014.channel(tek, 1)
 tek.setup_measurements() #change this function in library as desired
  
 tek.set_hScale(tdiv = .25)
 ch1.set_vScale(.5, debug = True)
 ch1.set_Position(-3.0)
-tek.trigger('DC', 'CH1', 'NORMal', level = 2.0)
+tek.trigger('DC', 'CH1', 'NORMal', level = 1.0)
 tek.set_averaging(False)
 tek.acquisition(True) #like hitting Run on front panel
 tek.wait() #wait for the scope to get acquisition
