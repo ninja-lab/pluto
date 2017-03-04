@@ -152,13 +152,15 @@ class tek2024b(Visa_Instrument.Visa_Instrument):
     def get_vbars_delta(self):
         return float(self.query('CURSor:VBars:DELTa?'))
     
-    def setImmedMeas(self, channel, kind):
+    def setImmedMeas(self, channel1, kind, channel2=False):
         '''
         The immediate measurement is not displayed on oscope and has
         no front panel equivalent. Immed measurements are computed only when
         requested and slow the waveform update rate less than displayed measurements
         '''
-        self.issueCommand("MEASUrement:IMMed:SOUrce1 CH"+ str(channel))
+        self.issueCommand("MEASUrement:IMMed:SOUrce1 CH"+ str(channel1))
+        if channel2:
+            self.issueCommand("MEASUrement:IMMed:SOUrce2 CH"+ str(channel2))
         self.issueCommand("MEASUrement:IMMed:TYPe " + kind)
         
     def getImmedMeas(self):
