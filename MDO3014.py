@@ -6,13 +6,19 @@ import copy
 import sys
 
 class MDO3014(Visa_Instrument.Visa_Instrument):
-    """ The class for the Tektronix TPS2024 oscilloscope
+    """ The class for the Tektronix MDO3014 oscilloscope
     This class is responsible for any functionality not specific to a
     particular channel, e.g. horizontal scale adjustment.
+    10 Million point record length
     
     TO DO 
     the status byte register MAV (message available) bit tells you
     if message is in the output queue
+    
+    improve setup_measurements
+    implement trigger STOPAfter options
+    eliminate redundancy in acquisition and run/stop functions
+    get_transferTime doesn't seem to be used
     """
        
     available_tdivs = [50,
@@ -49,25 +55,21 @@ class MDO3014(Visa_Instrument.Visa_Instrument):
                        0.0000000025]
 
     available_averageSettings = [128, 64, 32, 16, 8, 4, 2]
-
-    def __init__(self, rm, debug=False):
+    available_recordLengths = [1e3, 1e4, 1e5, 1e6, 5e6, 1e7]
+    #numAvg = 0 
+    def __init__(self, resource, debug=False):
         
-        for resource_id in rm.list_resources():
-            try:
-                super().__init__(resource_id, rm, debug)
-                if self.query('*IDN?').strip() == 'TEKTRONIX,MDO3014,C030398,CF:91.1CT FV:v1.22':
-                    print("Connected to: " + self.name.rstrip('\n'))
-                    self.inst.timeout = 50000
-                    self.inst.values_format.container = np.array
-                    self.x_incr = False
-                    self.x_num = False
-                    self.numAvg = 0 #the averages setting, all channels use this
-                    self.selectedChannel = 1
-                    self.debug = False
-                    break
-            except pyvisa.errors.VisaIOError:
-                print(resource_id + " is not Tektronix MDO3014, continuing...\n")
-            
+        super().__init__(resource, debug)
+        self.inst.timeout = 50000
+        self.inst.values_format.container = np.array
+        self.recordLength = 1e5
+        self.issueCommand('HORizontal:RECOrdlength {}'.format(1e5))
+        #self.x_incr = False
+        #self.x_num = False
+        self.numAvg = 0 #the averages setting, all channels use this, but won't know if its changed
+        #so they need to ask the scope what it is
+        self.selectedChannel = 1
+                    
 
     def status(self):
         '''
@@ -79,8 +81,6 @@ class MDO3014(Visa_Instrument.Visa_Instrument):
         return self.query("*STB?").strip()
 
     def wait(self):
-        #self.write("BUSY?")
-        #@tmp = self.read()
         i = 0
         while int(self.query("BUSY?")) == 1:
         #Only reports as busy if acquire mode is to stop after an acquisition...
@@ -101,12 +101,11 @@ class MDO3014(Visa_Instrument.Visa_Instrument):
         # Reset the instrument
         self.sendReset()
 
-    def issueCommand(self, command, feedback=None, wait=True):
+    def issueCommand(self, command, feedback=None):
         self.write(command)
         if feedback:
             print(feedback)
-        #if wait == True:
-            #self.checkComplete()
+        
     def setup_measurements(self):
         '''
         5 measurements can be taken,
@@ -152,8 +151,8 @@ class MDO3014(Visa_Instrument.Visa_Instrument):
         self.issueCommand('CURSor:FUNCtion VBArs', wait=False)
         self.issueCommand('CURSor:SELect:SOUrce CH'+ str(self.selectedChannel), wait=False)
     def set_hbars(self):
-        self.issueCommand('CURSor:FUNCtion HBArs', wait=False)
-        self.issueCommand('CURSor:SELect:SOUrce CH'+ str(self.selectedChannel), wait=False)
+        self.issueCommand('CURSor:FUNCtion HBArs')
+        self.issueCommand('CURSor:SELect:SOUrce CH'+ str(self.selectedChannel))
         
     def get_vbars_delta(self):
         return float(self.query('CURSor:VBars:DELTa?'))
@@ -175,9 +174,6 @@ class MDO3014(Visa_Instrument.Visa_Instrument):
         return self.query("MEASUrement:IMMed:VALue?")
 
     def trigger(self, coupling, channel, mode, level=0):
-        #self.issueCommand("TRIGger:MAIn SETLevel")
-        #self.issueCommand("TRIGger:MAIn SETLevel")
-        #self.issueCommand("TRIGger:MAIn SETLevel")
         self.issueCommand("TRIGger:MAIn:EDGE:COUPling " + coupling)
         self.issueCommand("TRIGger:MAIn:EDGE:SOUrce {channel}".format(channel = channel))
         self.issueCommand("TRIGger:MAIn:MODe " + mode)
@@ -273,34 +269,24 @@ class MDO3014(Visa_Instrument.Visa_Instrument):
         that affect the waveform
         """
         num = self.query("ACQuire:NUMACq?")
-        #while num == False:
-         #   num = self.read()
         return int(num)
 
     def waitForAcquisitions(self, num=False):
         """ Waits in a loop until the scope has captured the required number of
         acquisitions
         """
-       
-        #If the last acquisition was continuous, a new continuous acquisition is started.
-        #self.stop()
-        #time.sleep(.1)
-        #to really test, put scope in contiunuous run state, then hit run again
-        #and see if acquisition numbers start at 0
         
-        #self.issueCommand("ACQuire:STOPAfter RUNStop")
-        #self.run()
-        #time.sleep(10)
+        #If the last acquisition was continuous, a new continuous acquisition is started.
+        
         #done = self.get_numAcquisitions()
         #print("num acquisitions reported as BEFORE HITTING RUN: " + str(done))
         self.stop()
         self.run()
-        time.sleep(.5)
+        time.sleep(.5) #timing found necessary from experiment to allow scope to reset acquisition number
         #done = self.get_numAcquisitions()
         #print("num acquisitions reported as AFTER HITTING RUN: " + str(done))
         until = 0
-        print("argument for waitForAcquisitions is: " +str(num))
-        print("self.numAvg is: " + str(self.numAvg))
+        #print("argument for waitForAcquisitions is: " +str(num))
         if num == False and self.numAvg == False:
             print("Waiting for a single acquisition to finish")
             until = 1
@@ -381,7 +367,7 @@ class MDO3014(Visa_Instrument.Visa_Instrument):
 
         time_max = (windowlength * averaging) + (wavelength * averaging)
         return (time_min, time_max)
-
+    '''
     def get_transferTime(self, mode):
         if mode == 'ASCII':
             return 8.43393707275
@@ -389,7 +375,7 @@ class MDO3014(Visa_Instrument.Visa_Instrument):
             return 4.0
         else:
             print("Error getting transfer time")
-
+        '''
     def find_minTdiv(self, frequency, min_cycles=2):
         """ Finds the minimum s/div that will allow a given number of
         cycles at a particular frequency to fit in a capture
@@ -422,9 +408,11 @@ class MDO3014(Visa_Instrument.Visa_Instrument):
             
 
 
-class channel(MDO3014):
+class channel():
     """ Channel class that implements the functionality related to one of
     the oscilloscope's physical channels.
+    Channels HAVE-A scope - but this is not how its implemented currently
+    this will fix the reference to numAvg and allows more than one scope to be running
     """
     available_vdivs = [50.0,
                        20.0,
@@ -438,19 +426,25 @@ class channel(MDO3014):
                        0.05,
                        0.02]
 
-    def __init__(self, inst, channel, yunit='V', atten=10):
-        self.inst = inst
-        self.channel = channel
-        self.issueCommand('CH'+str(self.channel) + ':PRObe ' + str(atten))
-        self.issueCommand('CH'+str(self.channel) + ':YUNit ' + '"' + yunit + '"')
+    def __init__(self, scope, channel_num, yunit='V', atten=10):
+        
+        
+        self.channel_num = channel_num
+        scope.issueCommand('CH{0}:PRObe:GAIN {1}'.format(channel_num, atten))
+        scope.issueCommand('CH{0}:YUNits "{1}"'.format(channel_num, yunit))
+        self.scope = scope
         self.y_offset = False
         self.y_mult = False
         self.y_zero = False
+        self.x_incr = False
+        self.x_num = False
         self.curve_raw = False
         self.curve_raw_mean = False
         self.curve_raw_max = False
         self.curve_raw_min = False
-        
+    
+    def get_numAvg(self):
+        return int(self.scope.query('ACQuire:NUMAVg?'))
         
     def set_vScale(self, s, debug=False):
         """ Sets the V/div setting (vertical scale) for this channel
@@ -472,16 +466,16 @@ class channel(MDO3014):
             print('===================================================')
             print()
 
-        self.issueCommand("CH" + str(self.channel)
+        self.scope.issueCommand("CH" + str(self.channel_num)
                           + ":SCAle " + str(setVdiv),
                           "Setting channel "
-                          + str(self.channel)
+                          + str(self.channel_num)
                           + " scale to "
                           + str(setVdiv) + " V/div")
         self.y_mult = setVdiv
 
     def set_Position(self, level):
-        self.issueCommand("CH" + str(self.channel) + ":POSition " + str(level))
+        self.scope.issueCommand("CH" + str(self.channel_num) + ":POSition " + str(level))
         
     def did_clip(self, debug=False, get_new_waveform=False):
         """ Checks to see if the last acquisition contained clipped data points.
@@ -491,11 +485,13 @@ class channel(MDO3014):
         bottom of the screen! So waveforms clip on the screen before the digitizer level is 255
         A waveform centered in the middle with peaks +/- 2 division has max 180 and min 77,
         approx +/- 50 out of 127
+        Page 2-96: "25 digitizing levels per divsion for 1 byte, 6400 levels for 2 byte data"
         """
         count = 0
         #if self.curve_raw != False:
         
         if get_new_waveform:
+            #to be accurate, you need to full record length
             self.get_raw_waveform()
         if debug:
             print("max value is: " + str(self.curve_raw_max))
@@ -507,7 +503,7 @@ class channel(MDO3014):
         return False
     
     def get_Position(self):
-        return round(float(self.query("CH{}:POSition?".format(self.channel))),2)
+        return round(float(scope.query("CH{}:POSition?".format(self.channel_num))),2)
         
     def get_Offset(self):
         return
@@ -523,10 +519,9 @@ class channel(MDO3014):
             #if you can zoom in, find the next smallest V/div
             temp_index = self.available_vdivs.index(set_vdiv) + 1
             temp1 = self.available_vdivs[temp_index]
-            temp2 = 'Zooming in channel '+str(self.channel)+' to '
+            temp2 = 'Zooming in channel '+str(self.channel_num)+' to '
             temp2 += str(temp1)
             temp2 += ' V/div'
-            #print(temp2)
             self.set_vScale(temp1)
             
         
@@ -537,10 +532,9 @@ class channel(MDO3014):
             #if you can zoom out, find the next largest V/div
             temp_index = self.available_vdivs.index(set_vdiv) - 1
             temp1 = self.available_vdivs[temp_index]
-            temp2 = 'Zooming out channel '+str(self.channel)+' to '
+            temp2 = 'Zooming out channel '+str(self.channel_num)+' to '
             temp2 += str(temp1)
             temp2 += ' V/div'
-            #print(temp2)
             self.set_vScale(temp1)
              
     def center(self):
@@ -571,9 +565,9 @@ class channel(MDO3014):
     def get_yScale(self):
         """ Ask the instrument for this channels V/div setting.
         """
-        tmp = self.query('CH' + str(self.channel) + ':SCAle?')
+        tmp = self.scope.query('CH' + str(self.channel_num) + ':SCAle?')
         return float(tmp)
-
+    '''
     def get_waveform_autoRange(self, debug=False, wait=True, averages=False):
         """ Download a waveform, checking to see whether the V/div for this
         channel has been set too high or too low.
@@ -593,12 +587,12 @@ class channel(MDO3014):
                     best_div = self.available_vdivs[self.available_vdivs.index(set_vdiv) - 1]
                     if debug:
                         temp = 'Setting Y-scale on channel '
-                        temp += str(self.channel) + ' to '
+                        temp += str(self.channel_num) + ' to '
                         temp += str(best_div)
                         temp += ' V/div'
 
                     self.set_vScale(best_div)
-                    self.waitForAcquisitions(self.numAvg)
+                    self.scope.waitForAcquisitions(self.get_numAvg())
                     xs, ys = self.get_waveform(debug=False)
                     clipped = self.did_clip()
                 else:
@@ -640,18 +634,18 @@ class channel(MDO3014):
                     print('Setting new range' + str(best_window / 8.0))
                 self.set_vScale(best_window / 8.0)
                 print('Disabling averaging')
-                self.set_averaging(False)
+                self.scope.set_averaging(False)
                 time.sleep(1)
                 print(('Enabling averaging, setting to ' + str(averages)))
-                self.set_averaging(averages)
+                self.scope.set_averaging(averages)
                 time.sleep(1)
                 return self.get_waveform_autoRange(averages=averages)
         return [xs, ys]
-  
+    '''
     def set_waveformParams(self,
                            encoding='RPBinary',
                            start=0,
-                           stop=20000,
+                           stop=1e5,
                            width=1):
         """ Sets waveform parameters for the waveform specified by the channel
         parameter.
@@ -665,42 +659,39 @@ class channel(MDO3014):
            bottom of screen is 0, top is 255.  
            DATA:ENCdg can accepts SRIbinary, same as RIBinary, except LSB is transferred first.
             Or, SRPBinary, same as RPBinary, except LSB transferred first. 
-           start (optional: 0) [int - 0-2499] - data point to begin transfer from
-           stop (optional: 2500) [int - 1-2500] - data point to stop transferring at
-           width (optional: 2) [int] - how many bytes per data point to transfer. Does this imply
-           resolution? Because top and bottom of screen are limits in both cases I think. 
+           start (optional) [int - 0 to record length] - data point to begin transfer from
+           stop (optional) [int - start to recordLength] - data point to stop transferring at
+           width (optional: 2) [int] - how many bytes per data point to transfer. 
         """
-        self.issueCommand(":DATA:SOUrce CH" + str(self.channel),
-                          "Setting data source to channel " + str(self.channel),
-                          False)
+        self.scope.issueCommand(":DATA:SOUrce CH" + str(self.channel_num),
+                          "Setting data source to channel " + str(self.channel_num),)
         if encoding == 'ASCII':
-            self.issueCommand(":DATA:ENCdg ASCIi",
-                              "Setting data encoding to ASCII", False)
+            self.scope.issueCommand(":DATA:ENCdg ASCIi",
+                              "Setting data encoding to ASCII")
             self.encoding = 'ASCII'
         else:
-            self.issueCommand(":DATA:ENCdg RPBinary", 
-                              "Setting data encoding to RPBinary", False)
+            self.scope.issueCommand(":DATA:ENCdg RPBinary", 
+                              "Setting data encoding to RPBinary")
             self.encoding = 'RPBinary'
-        self.issueCommand(":DATA:STARt " + str(start),
-                          "Setting start data point to " + str(start), False)
-        self.issueCommand(":DATA:STOP " + str(stop),
-                          "Setting stop data point to " + str(stop), False)
-        self.issueCommand(":DATA:WIDTH " + str(width),
-                          "Setting bytes transferred per waveform point to " + str(width),
-                          False)
-        self.checkComplete()
+        self.scope.issueCommand(":DATA:STARt " + str(start),
+                          "Setting start data point to " + str(start))
+        self.scope.issueCommand(":DATA:STOP " + str(stop),
+                          "Setting stop data point to " + str(stop))
+        self.scope.issueCommand(":DATA:WIDTH " + str(width),
+                          "Setting bytes transferred per waveform point to " + str(width),)
+        self.scope.checkComplete()
 
     def get_waveformParams(self):
-    #does this all need leading colons:???/"
-            print("Data source is " + self.inst.query("MEASUrement:IMMed:SOUrce?"))
-            print("Starting data point is " + self.inst.query("DATA:STARt?"))
-            print("Ending data point is " + self.inst.query("DATA:STOP?"))
-            print("Data encoding is " + self.inst.query("DATA:ENCdg?"))
-            print("Data width is " + self.inst.query("DATA:WIDTH?"))
-
+    #does this all need leading colons ?
+        print("Data source is " + self.scope.query("MEASUrement:IMMed:SOUrce?"))
+        print("Starting data point is " + self.scope.query("DATA:STARt?"))
+        print("Ending data point is " + self.scope.query("DATA:STOP?"))
+        print("Data encoding is " + self.scope.query("DATA:ENCdg?"))
+        print("Data width is " + self.scope.query("DATA:WIDTH?"))
+    '''
     def get_transferTime(self):
-        return self.inst.get_transferTime(self.encoding)
-
+        return scope.get_transferTime(self.encoding)
+    '''
     def get_raw_waveform(self):
         
         #self.stop()
@@ -709,49 +700,44 @@ class channel(MDO3014):
         #time.sleep(.2)
         #needs provision to wait and also to be running!!
         #check if running, if not, start running. Otherwise you'll see an old waveform
-        self.curve_raw = self.inst.inst.query_binary_values("CURVe?", "B", container=np.array)
+        self.curve_raw = self.scope.inst.query_binary_values("CURVe?", "B", container=np.array)
         self.curve_raw_mean = np.mean(self.curve_raw)
         self.curve_raw_min = np.min(self.curve_raw)
         self.curve_raw_max = np.max(self.curve_raw)
-        
-    
-
-    
+          
     def get_waveform(self, debug=False, wait=True):
         '''
-        Downloads this channels waveform data.This function 
-        will not make any adjustments to the V/div settings.If the parameter 
+        Downloads this channels waveform data. This function 
+        will not make any adjustments to the V/div settings. If the parameter 
         wait is set to false, the most recent waveform will be
         transmitted. Otherwise the scope will wait for the next data acquisition
         to complete before downloading waveform data. The wait is only reliable
         if the number of acquisitions is starting at zero. 
         '''
         if wait:
-            
-            self.waitForAcquisitions(self.numAvg) #not referencing intended tek's value!!!
+            #Need to ask the scope what its average setting is. 
+            ''' 
+            The numAvg parent instance variable must be unique to the scope instance,
+                and child channels don't know when it is  changed with set_averaging()
+            '''
+            self.scope.waitForAcquisitions(self.get_numAvg()) #not referencing intended tek's value!!!
             
 
-        self.issueCommand(":DATA:SOUrce CH" + str(self.channel),
-                          "Setting data source to channel " + str(self.channel))
+        self.scope.issueCommand(":DATA:SOUrce CH" + str(self.channel_num),
+                          "Setting data source to channel " + str(self.channel_num))
                 
-        out = self.query(":WFMOutpre?")
-        #y_offset = False
-        #y_mult = False
-        #x_incr = False
-        #y_zero = False
-        #x_num = False
+        out = self.scope.query(":WFMOutpre?")
         '''
-	dl is digitizer level
-	value in YUNits =
-	((curve_in_dl - YOFF_in_dl) * YMUlt) + YZERO_in_YUNits
-	'''
-#watch out for header and verbose mode
+        dl is digitizer level
+        value in YUNits =
+        ((curve_in_dl - YOFF_in_dl) * YMUlt) + YZERO_in_YUNits
+        '''
+        #watch out for header and verbose mode
         out = out.split(';')
         self.encoding = out[2] #ASC or BIN
         channelStats = out[5] #WFID: channel num, coupling, V/div, s/div, num points, Sample mode 
         parts = channelStats.split(', ')
         self.x_incr = float(out[10])
-        #x_num = int(parts[4].replace(' points',''))
         self.x_num = int(out[6])
         self.y_mult = float(out[14])
         self.y_zero = float(out[16])
@@ -779,19 +765,17 @@ class channel(MDO3014):
             print("y_zero is " + str(self.y_zero))
             print("y_offset is " + str(self.y_offset))
             print("Acquire mode is: " + parts[5])
-            
-       
         
         print("Requesting waveform") 
         if self.encoding[:3] == 'BIN':
-            stuff = self.inst.inst.query_binary_values("CURVe?", "B", container=np.array)
+            stuff = self.scope.inst.query_binary_values("CURVe?", "B", container=np.array)
             '''
             format character for struct module, 'B' is unsigned char, which, 
             matches RP binary format from scope. Width is one so byte order 
             doesn't matter, but it could be specified (page 2-41 in scope manual) 
             '''
         elif self.encoding[:3] == 'ASC':
-            stuff = self.inst.inst.query_ascii_values("CURVe?", separator=",")
+            stuff = self.scope.inst.query_ascii_values("CURVe?", separator=",")
         else:
             print("Error: Waveform encoding was not understood, exiting!")
             sys.exit()
@@ -800,7 +784,6 @@ class channel(MDO3014):
         self.curve_raw_mean = np.mean(stuff)
         self.curve_raw_min = np.min(stuff)
         self.curve_raw_max = np.max(stuff)
-        #this puts it back in lists, so fix
         data_y = np.empty(self.x_num)
         data_x = np.empty(self.x_num)
         for i in range(self.x_num - 1):
@@ -815,17 +798,13 @@ class channel(MDO3014):
             print("======================================================")
             print()
 
-        #self.y_offset = y_offset
-        #self.y_mult = y_mult
-        #self.x_incr = x_incr
-        #self.y_zero = y_zero
-        ''' 
-        if self.did_clip() == True:
-            print()
-            print("=======================================================")
-            print("WARNING: Data payload possibly contained clipped points")
-            print("=======================================================")
-            print()
-        ''' 
+            ''' 
+            if self.did_clip() == True:
+                print()
+                print("=======================================================")
+                print("WARNING: Data payload possibly contained clipped points")
+                print("=======================================================")
+                print()
+            ''' 
         return data_x, data_y
 

@@ -78,7 +78,7 @@ print(df.shape)
 #frequencies are the indices
 freqs = [.2, .5, 1.0, 2.0, 5.0]
 #currents are the columns
-currents = [8.0, 9.0, 10.0]
+currents = ['8.0 auto', '8.0 cursor', '9.0', '10.0']
 
 freq_data = pd.DataFrame(index= freqs, columns = currents )
 print(freq_data)
@@ -92,7 +92,7 @@ freq_data.to_csv(path_or_buf=filename)
 
 #edit dataframe given a frequency and current, then overwrite
 freq = .5
-current = 9
+current = '8.0 cursor'
 value = 7
 freq_data.at[freq, current] = 7
 print(freq_data)

@@ -14,14 +14,13 @@ class Visa_Instrument:
     MSS bit in SBR is also set to 1, and a service request is generated via...
     """
     prevCommand = ''
-    debug = False
+    
 
-    def __init__(self, resource_id, rm, debug=False):
-        self.device = resource_id
+    def __init__(self, inst, debug=False):
+        
         self.debug = debug
-        self.inst = rm.open_resource(resource_id, send_end=True) #the VISA resource
+        self.inst = inst #the VISA resource
         self.name = self.getName()
-        self.inst.values_format.container = np.array
         
     def getName(self):
         """ Returns the instruments identifier string.

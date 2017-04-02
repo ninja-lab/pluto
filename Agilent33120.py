@@ -8,17 +8,11 @@ class f33120a(Visa_Instrument.Visa_Instrument):
     availableShapes = ['SIN' , 'SQU' , 'TRI' , 'RAMP' , 'NOIS' , 'DC' , 'USER']
     
     
-    def __init__(self, rm, debug=False):
-       
-        for resource_id in rm.list_resources():
-            try:
-                super().__init__(resource_id, rm, debug)
-                if self.query('*IDN?').strip() == 'HEWLETT-PACKARD,33120A,0,10.0-5.0-1.0':
-                    print("Connected to: " + self.name.rstrip('\n'))
-                    self.write('SYSTem:REMote')
-                    break
-            except pyvisa.errors.VisaIOError:
-                print(resource_id + " is not Agilent 33120A, continuing...\n")
+    def __init__(self, resource, debug=False):
+ 
+        super().__init__(resource, debug)
+        self.write('SYSTem:REMote')
+           
     
     def selfTest(self):
         return self.query('*TST?')
