@@ -70,7 +70,7 @@ def generate_inductance_plot(mags, freqs, legend_strs, title_str):
     fig.savefig(filename)
     
     
-def easy_plot(yvals, xvals, legend_strs, title_str):
+def easy_plot(yvals, xvals, legend_strs, xlabel, ylabel, title_str):
     save_loc = 'C:\\Users\\Erik\\Desktop\\PythonPlots\\'
     fig, ax1 = plt.subplots()
     colored_dashes = ['g--', 'b--', 'r--', 'k--', 'c--']
@@ -79,8 +79,8 @@ def easy_plot(yvals, xvals, legend_strs, title_str):
         ax1.plot(xvals, yval, colored_dashes[i])
         i = i + 1
     
-    ax1.set_xlabel('DC Current')
-    ax1.set_ylabel('Inductance [H]', color = 'b')
+    ax1.set_xlabel(xlabel)
+    ax1.set_ylabel(ylabel, color = 'b')
     ax1.legend(legend_strs)
     for tl in ax1.get_yticklabels():
         tl.set_color('b')
