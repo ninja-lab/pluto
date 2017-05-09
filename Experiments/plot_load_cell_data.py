@@ -17,7 +17,7 @@ time_stamp = datetime.now().strftime('%Y-%m-%d_%H_%M')
 title_str = 'HT characterization data'
 name = title_str + time_stamp
 filename = save_loc + name.replace(' ','_') +'.csv'       
-results = pd.read_csv('C:\\Users\\Erik\\Desktop\\PythonPlots\\'+'HT_characterization_data2017-04-22_11_25.csv')
+results = pd.read_csv(save_loc+'HT_characterization_data2017-04-22_11_25.csv')
 
        
 #plot the error at each point of each load cell, compared to force

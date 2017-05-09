@@ -33,6 +33,68 @@ filename = (save_loc + name + '.png').replace(' ','_')
 fig.savefig(filename)
 
 '''
+'''
+df1 = pd.DataFrame({'A': ['A0', 'A1', 'A2', 'A3'],
+                    'B1': ['B0', 'B1', 'B2', 'B3'],
+                    'C': ['C0', 'C1', 'C2', 'C3'],
+                    'D': ['D0', 'D1', 'D2', 'D3']},
+                    index=[0, 1, 2, 3])
+   
+
+df2 = pd.DataFrame({'A2': ['A4', 'A5', 'A6', 'A7'],
+                    'B1': ['B4', 'B5', 'B6', 'B7'],
+                    'C2': ['C4', 'C5', 'C6', 'C7'],
+                    'D2': ['D4', 'D5', 'D6', 'D7']},
+                     index=[0,1,2,3])
+ 
+
+df3 = pd.DataFrame({'A': ['A8', 'A9', 'A10', 'A11'],
+                    'B1': ['B8', 'B9', 'B10', 'B11'],
+                    'C': ['C8', 'C9', 'C10', 'C11'],
+                    'D': ['D8', 'D9', 'D10', 'D11']},
+                    index=[0,1,2,3])
+                 
+print('before')
+print(df2)
+for key in df3.keys():
+    if key in df2.keys():
+        print(key)
+        print(type(key))
+        df2[key] = df3[key]
+print('after')
+print(df2)
+
+
+left = pd.DataFrame({'key1': ['Knan', 'Knan', 'Knan', 'Knan'],
+                      'key2': ['Kxx1', 'Kxx2', 'Kxx3', 'Kxx4'],
+                      'A': ['A0', 'A1', 'A2', 'A3'],
+                      'B': ['B0', 'B1', 'B2', 'B3']})
+ 
+
+right = pd.DataFrame({'key1': ['K0', 'K1', 'K1', 'K2'],
+                       'key2': ['K5', 'K6', 'K7', 'K8']})
+ 
+ 
+ 
+print('left:')
+print(left)
+print('right:')
+print(right)
+result = pd.concat([left, right], ignore_index=True)
+print(result)
+for key in right.keys():
+    if key in left.keys():
+        print(key)
+        print(type(key))
+        left[key] = right[key]
+print('after')
+print(left)
+'''
+results1 = pd.read_csv(instrument_strings.save_loc+'PVC1001_Characterization2017-04-28.csv')
+results2 = pd.read_csv(instrument_strings.save_loc+'PVC1001_Characterization2017-04-28_14_58.csv')
+
+results = results2.combine_first(results1)
+
 
 data = np.array([['','Col1','Col2'],
                 ['Row1',1,2],

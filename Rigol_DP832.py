@@ -11,7 +11,7 @@ class Rigol_DP832(Visa_Instrument.Visa_Instrument):
         self.inst.timeout = 10000
         selectedChannel = 1
                      
-    def apply(self, voltage, current_limit, channel = 1):
+    def apply(self, voltage, current_limit=3.0, channel = 1):
         if self.ocp_levels[channel - 1] < current_limit:
             self.ocp_levels[channel - 1] = current_limit + .2
         #set current protection level
@@ -23,7 +23,7 @@ class Rigol_DP832(Visa_Instrument.Visa_Instrument):
         self.write(q)
         
         #apply settings, with current limit
-        apply_comm = ':APPLy CH{channel}, {v_level:.1f}, {i_limit:.1f}'.format(channel = channel, v_level = voltage, i_limit = current_limit)
+        apply_comm = ':APPLy CH{channel}, {v_level:.1f}, {i_limit:.3f}'.format(channel = channel, v_level = voltage, i_limit = current_limit)
         #print(apply_comm)
         self.write(apply_comm)
         self.turn_on(channel)

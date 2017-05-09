@@ -4,6 +4,7 @@ import tek2024b
 import numpy as np
 from math import sqrt
 import time
+import instrument_strings
 '''
 Uses tektronix tps2024b in conjuction with Rigol_DP832. 
 Load resistor used to test current limiting and current protection. 
@@ -15,7 +16,22 @@ Sweeps channel 1 output between 2 and 4 Volts, in .2V increments.
 
 '''
 rm = pyvisa.ResourceManager()
-dc_supply = Rigol_DP832.Rigol_DP832(rm)
+dc = rm.open_resource(rm.list_resources()[0])
+print(dc.query('*IDN?'))
+
+for resource_id in rm.list_resources():
+    try:
+        inst = rm.open_resource(resource_id, send_end=True) #the VISA resource
+        name_str = inst.query('*IDN?').strip()
+        
+        if name_str == instrument_strings.RigolDP832:
+            dc_supply = Rigol_DP832.Rigol_DP832(inst)
+            print("Connected to: " + dc_supply.name.rstrip('\n'))
+        
+    except pyvisa.errors.VisaIOError:
+        print(resource_id + " is not what we're looking for, continuing...\n")
+
+'''
 tek = tek2024b.tek2024b(rm)
 ch1 = tek2024b.channel(tek, 1)
 dc_supply.write('*CLS')
@@ -56,3 +72,35 @@ for level in dc_levels:
 
 dc_supply.turn_off()
 print(dc_supply.query('*ESR?'))
+'''
+dc_supply.write('*CLS')
+resistance = float(input('What value resistor do you have for a load?\n'))
+power = float(input('What is the power rating of your load?\n'))
+v_rating = sqrt(power*resistance)
+print('The resistor can handle {0:.3G} volts, and {1:.3G} amps\n'.format(v_rating, power/v_rating))
+
+dc_supply.apply(.007)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
