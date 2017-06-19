@@ -4,9 +4,24 @@ import pyvisa
 import sys
 
 class Keysight34972A(Visa_Instrument.Visa_Instrument):
+    
+    '''
+    use the scan list to return all configured readings at once. 
+    First, configure the channels how you want them with the configure methods. 
+    Then, the channels you want readings from are defined with set_scan(). 
+    The read() command places the instrument in the wait-for-trigger state determined by set_trigger(), and
+    once triggered and measurements are complete, they are sent to the PC. 
+    
+    Alternatively, using INIT takes measurements when the trigger is received, but not sent to the PC until FETCh()
+    is called. 
+    
+    To change the integration time (the number of power line cycles), you must 
+    
+    '''
+    
     def __init__(self, resource, debug=False):
         super().__init__(resource, debug)
-        self.inst.timeout = 10000
+        self.inst.timeout = 50000
         self.inst.read_termination = '\n'
         #self.write('SENSe:TEMPerature:TRANsducer:TCouple:RJUNction:TYPE INTernal (@101:110)')
         
@@ -31,11 +46,14 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
     def configure_ACV_channels(self, scan_list):
         self.inst.write('CONFigure:VOLTage:AC {}'.format(scan_list))
         
+    def configure_resistance_channels(self, scan_list):
+        self.inst.write('CONFigure:RESistance {}'.format(scan_list))
+    
     def configure_temp_channels(self, scan_list, probe_type='TCouple', thermocouple='K' ):
         self.inst.write('CONFigure:TEMPerature {0}, {1}, {2}'.format(probe_type, thermocouple, scan_list))
     
     def set_scan(self, scan_list):
-        self.inst.write(self.inst.write('ROUTe:SCAN {}'.format(scan_list)))
+        self.inst.write('ROUTe:SCAN {}'.format(scan_list))
     
     def set_delay(self, seconds, scan_list):
         ''' Only valid while scanning. CONFigure and MEASure? set the channel delay to automatic
@@ -48,7 +66,7 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         For IMMediate, trigger is always present, and when instrument goes in to 'wait for trigger' state, the 
         trigger is issued immediately. 
         '''
-        self.inst.write('TRIger:SOUrce {}'.format(source))
+        self.inst.write('TRIGger:SOUrce {}'.format(source))
         
     def get_NPLC(self, scan_list):
         val = self.inst.query('SENSe:VOLTage:DC:NPLC? ({})'.format(scan_list))

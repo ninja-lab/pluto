@@ -32,8 +32,8 @@ name = title_str + time_stamp
 filename = (save_loc + name + '.png').replace(' ','_')
 fig.savefig(filename)
 
-'''
-'''
+
+
 df1 = pd.DataFrame({'A': ['A0', 'A1', 'A2', 'A3'],
                     'B1': ['B0', 'B1', 'B2', 'B3'],
                     'C': ['C0', 'C1', 'C2', 'C3'],
@@ -53,7 +53,56 @@ df3 = pd.DataFrame({'A': ['A8', 'A9', 'A10', 'A11'],
                     'C': ['C8', 'C9', 'C10', 'C11'],
                     'D': ['D8', 'D9', 'D10', 'D11']},
                     index=[0,1,2,3])
-                 
+                    
+print(df1)
+print(df3)
+print(pd.concat([df1, df1], axis = 0, ignore_index=True))
+adict = {'A': 555}
+print('a new df:')
+print(pd.DataFrame(adict, index=['string']))
+#print(pd.concat([df1, df3], axis = 0, ignore_index=True))
+'''
+
+sensors = [1,2,3]
+places = ['p1', 'p2', 'p3']
+columns = ['data1_{}'.format(i) for i in sensors]
+columns.extend(['data2_{}'.format(i) for i in sensors])
+results = pd.DataFrame(columns = columns)
+print('results before:')
+print(results)
+data = [1, 10, 1.3, 10.1, .9,10.1] #[data1_1, data2_1, data1_2, etc]
+for place in places:
+    print(place)
+    dict = {}
+    for i in sensors: 
+        dict['data1_{}'.format(i)] = round(data[i-1],1)
+        dict['data2_{}'.format(i)] = round(data[i],1)
+    dict['Location'] = place
+    this_location = pd.DataFrame(dict, index = np.arange(1))   
+    print('this location:')
+    print(this_location)
+    #results = results.merge(this_location)
+    results = pd.concat([results, this_location])
+    print('results after ' + place)
+    print(results)
+    
+'''    
+sensors = [1,2,3]
+places = ['p1', 'p2', 'p3']
+columns = ['data1_{}'.format(i) for i in sensors]
+columns.extend(['data2_{}'.format(i) for i in sensors])
+results = pd.DataFrame(index = places, columns = columns)
+print(results)
+data_acquired = [1, 10, 1.3, 10.1, .9,10.1] #[data1_1, data2_1, data1_2, etc]
+for i in sensors: 
+    dict['data1_{}'.format(i)] = data[i-1]
+    dict['data2_{}'.format(i)] = data[i]
+    
+'''    
+    
+    
+    
+'''      
 print('before')
 print(df2)
 for key in df3.keys():
@@ -89,7 +138,7 @@ for key in right.keys():
         left[key] = right[key]
 print('after')
 print(left)
-'''
+
 results1 = pd.read_csv(instrument_strings.save_loc+'PVC1001_Characterization2017-04-28.csv')
 results2 = pd.read_csv(instrument_strings.save_loc+'PVC1001_Characterization2017-04-28_14_58.csv')
 
@@ -161,15 +210,27 @@ print(freq_data)
 freq_data.to_csv(path_or_buf=filename)
 
 
+df = pd.DataFrame({'A#1_': [1,2,4,6],
+                    'B#1_': [50, 101, 200, 100],
+                    'I_Rsns#1': [.007, .009, .0071, .0072],
+                    'A#2_': [1,2,3,4],
+                    'B#2_': [60,200,400,500]},
+                    index=[0, 1, 2, 3])
 
+#return a new dataframe with those values in df1.B1 > 100, along with all the values with the same index
 
+data1 = df.filter(regex='#1')[df['B#1_'] > 100]
+data2 = df.filter(regex='#2')[df['B#2_'] > 100]
+print(data1)
+print(data2)
+#dataframe mean returns a series
+current_lev = data1.filter(regex = 'I_Rsns').mean()[0]
+print(current_lev)
+#series mean returns a scalar
+avg_R = data1['A#1_'].mean()
+print(avg_R)
 
-
-
-
-
-
-
-
-
-
+results = pd.concat([data1, data2], axis = 1)
+print(results)
+'''
+#now average the resistance levels in the range obtained, plot this number against the current level

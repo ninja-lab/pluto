@@ -44,8 +44,6 @@ title_str = 'HT characterization data'
 name = title_str + time_stamp
 filename = save_loc + name.replace(' ','_') +'.csv'
 load_cells = []
-HT_zeros = pd.DataFrame()
-TT_zeros = pd.DataFrame()
 gain = .000701 # V/pound
 for i in range(2):
     TT_brdg = []

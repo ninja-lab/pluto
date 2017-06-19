@@ -5,7 +5,9 @@ DP832A = 'RIGOL TECHNOLOGIES,DP832,DP8C184350296,00.01.14'
 FG33120A = 'HEWLETT-PACKARD,33120A,0,10.0-5.0-1.0'
 Keysight34972A = 'Agilent Technologies,34972A,MY49023653,1.17-1.12-02-02'
 RigolDP832 = 'RIGOL TECHNOLOGIES,DP832,DP8C184350296,00.01.14'
+SW5250A = 'Elgar, SW Series 5250A, 1, 5.11'
 save_loc = 'C:\\Users\\Erik\\Desktop\\PythonPlots\\'
+
 
 ''' pass the (correct) visa resource to the constructor for the instrument...
 
