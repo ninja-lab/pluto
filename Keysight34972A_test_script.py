@@ -36,7 +36,7 @@ func_gen.applyFunction('SIN', freq, ampl, offset)
 dc_command = 1.0
 DCsupply.apply(dc_command, .1, 3)
 results = pd.DataFrame()
-
+daq.set_NPLC(200, '(@101)')
 dc_voltage = daq.measure_DCV(101)
 ac_voltage = daq.measure_ACV(102)
 temp = daq.measure_temp(103)

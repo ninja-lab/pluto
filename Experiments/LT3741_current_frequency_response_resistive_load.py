@@ -24,7 +24,7 @@ TO-DO: Repeat at different quiescient current levels with rotor lifted.
 rm = visa.ResourceManager()
 print(rm.list_resources())
 
-func_gen = Agilent33120.f33120a(rm)
+func_gen = Agilent33120.f33120a(rm) #doesn't work anymore! 
 func_gen.displayText("'Hi Erik'")
 tek = tek2024b.tek2024b(rm)
 ch1 = tek2024b.channel(tek, 1) #input current command

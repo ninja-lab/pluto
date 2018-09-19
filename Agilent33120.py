@@ -1,5 +1,5 @@
 import Visa_Instrument
-import pyvisa
+#import pyvisa
 import time
 
 class f33120a(Visa_Instrument.Visa_Instrument):
