@@ -8,7 +8,7 @@ Created on Fri Aug 24 11:24:36 2018
 import Visa_Instrument
 import time
 
-class PSW800(Visa_Instrument.Visa_Instrument):
+class InstekPSW(Visa_Instrument.Visa_Instrument):
     def __init__(self, resource, debug=False):
         super().__init__(resource, debug)
         self.set_averaging(2)

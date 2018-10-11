@@ -7,7 +7,7 @@ Created on Fri Aug 24 16:14:24 2018
 
 import pyvisa
 import instrument_strings
-import PSW800
+import InstekPSW
 import time
 
 rm = pyvisa.ResourceManager()
@@ -15,9 +15,9 @@ for resource_id in rm.list_resources():
     try:
         inst = rm.open_resource(resource_id, send_end=True) #the VISA resource
         name_str = inst.query('*IDN?').strip()
-        
+        print(name_str)
         if name_str == instrument_strings.PSW800:
-            dc_supply = PSW800.PSW800(inst)
+            dc_supply = InstekPSW.InstekPSW(inst)
             print("Connected to: " + dc_supply.name.rstrip('\n'))
         
     except pyvisa.errors.VisaIOError:
