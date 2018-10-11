@@ -44,11 +44,19 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         val = self.inst.query('MEASure:VOLTage:DC? {0}, (@{1})'.format(range, channel_num))
         return round(float(val), 6)
         
+    def measure_Resistance(self, channel_num, range='AUTO'):
+        val = self.inst.query('MEASure:RESistance? {0}, (@{1})'.format(range, channel_num))
+        return round(float(val),1)
+    
     def measure_temp(self, channel_num, probe_type='TCouple', thermocouple='K'):
         temp_str = self.inst.query('MEASure:TEMPerature? {0}, {1}, (@{2})'.format(probe_type, thermocouple,channel_num))
         return round(float(temp_str),4)
     
     def configure_DCV_channels(self, scan_list):
+        '''
+        Calling configure resets other measurement parameters, so 
+        call this first when setting up the instrument. 
+        '''
         self.inst.write('CONFigure:VOLTage:DC {}'.format(scan_list))
     
     def configure_ACV_channels(self, scan_list):
@@ -75,10 +83,22 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
     def set_trigger(self, source):
         '''
         BUS | IMMediate | EXTernal | TIMer | ALARm[n]
-        For IMMediate, trigger is always present, and when instrument goes in to 'wait for trigger' state, the 
+        For IMMediate, trigger is always present, and when 
+        instrument goes in to 'wait for trigger' state, the 
         trigger is issued immediately. 
         '''
         self.inst.write('TRIGger:SOUrce {}'.format(source))
+    def set_timer(self,seconds):
+        '''
+        seconds: a number from 0 to 359,999 with 1ms resolution
+        (0 to 100 hours)
+        '''
+        self.inst.write('TRIGger:TIMer {}'.format(seconds))
+    def set_trigger_count(self, count):
+        '''
+        An integer from 1 to 50,000 triggers
+        '''
+        self.inst.write('TRIGger:COUNt {}'.format(count))
         
     def get_NPLC(self, scan_list):
         val = self.inst.query('SENSe:VOLTage:DC:NPLC? ({})'.format(scan_list))
@@ -115,6 +135,9 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         self.inst.write('FORMat:READing:TIME {}'.format(time))
         return 
     
+    def format_time_type(self, time_type='RELative'):
+        self.inst.write('FORMat:READing:TIME:TYPE {}'.format(time_type))
+    
     def analog_source(self, channel, voltage):
         '''
         use the multifunction module 34907A DAC to source 
@@ -124,7 +147,7 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         self.inst.write('SOURce:VOLTage {},(@{})'.format(voltage, channel))
         
     
-    def digital_source1(self, channel, bit, level):
+    def digital_source1(self, bit, level):
         '''
         Check the current state of the digital output 
         OR in the new bit to change, don't change the others
@@ -132,7 +155,6 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
             (upper byte), where s represents the slot number.
         bit: 0 through 7
         level: 0 or 1
-        
         '''
         
         val = self.byte1
@@ -142,19 +164,41 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         #OR in the new bit
         val = val | level << bit
         self.byte1 = val
-        self.inst.write('SOURCe:DIGital:DATA:BYTE {},(@{})'.format(val, channel))
+        self.inst.write('SOURCe:DIGital:DATA:BYTE {},(@{})'.format(val, 101))
         
-    def digital_source2(self,channel, bit, level):
-        
-    #def digital_read(self, byte):
+    def digital_source2(self,bit, level):
         '''
-        The multifunction 34907A module has 2 8-bit digital ports. 
-        Return the value currently on the port specified by the
-        byte argument.
-        example of byte:
-            (@301) - channel 01 on the module in slot 300.
-        
+        Check the current state of the digital output 
+        OR in the new bit to change, don't change the others
+        channel: numbered "s01" (lower byte) and "s02" 
+            (upper byte), where s represents the slot number.
+        bit: 0 through 7
+        level: 0 or 1
         '''
-    #    val = self.inst.query('SOURCe:DIGital:DATA:BYTE? (@{})'.format(byte))
         
-        
+        val = self.byte2
+        #clear the bit we want to write to
+        clr = (0b1 << bit) ^ 0xFF
+        val = val & clr 
+        #OR in the new bit
+        val = val | level << bit
+        self.byte2 = val
+        self.inst.write('SOURCe:DIGital:DATA:BYTE {},(@{})'.format(val, 102)) 
+
+    def monitor(self, quantity):
+        channel_num = quantity.getChannel()
+        self.setScale(quantity.getScale(), channel_num)
+        self.setOffset(quantity.getOffset(), channel_num)
+        self.inst.write('ROUTe:MONitor (@{})'.format(channel_num))
+        self.inst.write('ROUTe:MONitor:STATe ON')
+    def monitorData(self):
+        return float(self.inst.query('ROUTe:MONitor:DATA?'))
+    def setScale(self, scale, channel_num):
+        self.inst.write('CALCulate:SCALe:GAIN {},(@{})'.format(scale, channel_num))
+    def setOffset(self, offset, channel_num):
+        self.inst.write('CALCulate:SCALe:OFFSet {},(@{})'.format(offset, channel_num))
+    def useScaling(self):
+        '''
+        This will apply to all channels
+        '''
+        self.inst.write('CALCulate:SCALe:STATe ON')
