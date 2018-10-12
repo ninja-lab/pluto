@@ -2,6 +2,7 @@
 import Visa_Instrument
 import pyvisa
 import sys
+import time
 
 class Keysight34972A(Visa_Instrument.Visa_Instrument):
     
@@ -22,7 +23,7 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
     
     def __init__(self, resource, debug=False):
         super().__init__(resource, debug)
-        self.inst.timeout = 50000
+        self.inst.timeout = 5000
         self.inst.read_termination = '\n'
         '''
         The istrument cannot report what is on the digital output ports, 
@@ -187,11 +188,18 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
 
     def monitor(self, quantity):
         channel_num = quantity.getChannel()
+        self.configure_DCV_channels('(@{})'.format(channel_num))
+        time.sleep(.2)
         self.setScale(quantity.getScale(), channel_num)
+        time.sleep(.2)
         self.setOffset(quantity.getOffset(), channel_num)
+        time.sleep(.2)
         self.useScaling()
+        time.sleep(.2)
         self.inst.write('ROUTe:MONitor (@{})'.format(channel_num))
+        time.sleep(.2)
         self.inst.write('ROUTe:MONitor:STATe ON')
+        
     def monitorData(self):
         return float(self.inst.query('ROUTe:MONitor:DATA?'))
     def setScale(self, scale, channel_num):

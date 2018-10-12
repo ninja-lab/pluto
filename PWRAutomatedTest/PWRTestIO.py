@@ -59,28 +59,28 @@ def load3_off(daq):
 
 def set_discharge_Vgs(daq, voltage):
     daq.analog_source(104, voltage)
-voltages = []
-currents = []
-powers = []
-def discharge_caps(vgs, voltage, current, daq):
+
+def discharge_caps(vgs, HVCAPquantity, BuckCurrentquantity, daq):
     set_discharge_Vgs(daq, vgs)
-    voltages.append(voltage)
-    currents.append(currents)
-    powers.append(voltage*current)
+
+    HVCAPquantity.measure(daq)
+    BuckCurrentquantity.measure(daq)
+    voltage = HVCAPquantity.getMeasurement()
+    current = BuckCurrentquantity.getMeasurement()
     if voltage < 1 and current < .1:
         set_discharge_Vgs(daq, 10)
         time.sleep(5)
-        print('caps should be discharged')
+        print('caps are be discharged')
         set_discharge_Vgs(daq, 0)
         return 
     else:
         power = voltage*current
         if power > 100:
-            discharge_caps(max(0,vgs-.1),measure_HVCap(daq),measure_buckCurrent(daq),daq )
+            discharge_caps(max(0,vgs-.5), HVCAPquantity, BuckCurrentquantity, daq)
         elif power < 60:
-            discharge_caps(min(vgs+.1,10),measure_HVCap(daq),measure_buckCurrent(daq),daq )
+            discharge_caps(min(vgs+.1,10), HVCAPquantity, BuckCurrentquantity, daq)
         else:
-            discharge_caps(vgs, measure_HVCap(daq),measure_buckCurrent(daq),daq )
+            discharge_caps(vgs,HVCAPquantity,BuckCurrentquantity,daq)
             
             
 def get_tau(xdata, ydata, dclevel):
