@@ -189,6 +189,7 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         channel_num = quantity.getChannel()
         self.setScale(quantity.getScale(), channel_num)
         self.setOffset(quantity.getOffset(), channel_num)
+        self.useScaling()
         self.inst.write('ROUTe:MONitor (@{})'.format(channel_num))
         self.inst.write('ROUTe:MONitor:STATe ON')
     def monitorData(self):
