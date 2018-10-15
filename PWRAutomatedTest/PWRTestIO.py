@@ -75,7 +75,7 @@ def discharge_caps(vgs, HVCAPquantity, BuckCurrentquantity, daq):
         return 
     else:
         power = voltage*current
-        if power > 100:
+        if power > 100: #Watts 
             discharge_caps(max(0,vgs-.5), HVCAPquantity, BuckCurrentquantity, daq)
         elif power < 60:
             discharge_caps(min(vgs+.1,10), HVCAPquantity, BuckCurrentquantity, daq)

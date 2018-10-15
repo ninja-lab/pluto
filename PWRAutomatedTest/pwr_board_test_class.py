@@ -22,10 +22,8 @@ class pwr_board_test_class():
         return self.mydict['MEASURED']
     
     def isValid(self):
-        if self.getMeasurement is np.NaN:
-            return false
-        else:
-            return self.mydict['MIN'] <= self.getMeasurement() <= self.mydict['MAX']
+
+        return self.mydict['MIN'] <= self.getMeasurement() <= self.mydict['MAX']
     
     def getUnits(self):
         return self.mydict['UNITS']
@@ -47,19 +45,20 @@ class quantity():
     
     def setMeasurement(self, value):
         self.mydict['MEASURED'] = value
-    
+    def getMin(self):
+        return self.mydict['MIN']
+    def getMax(self):
+        return self.mydict['MAX']
     def getMeasurement(self):
         return self.mydict['MEASURED']
-    
+    def getNominal(self):
+        return self.mydict['NOMINAL']
     def getScale(self):
         return self.mydict['SCALE']
     def getOffset(self):
         return self.mydict['OFFSET']
     def isValid(self):
-        if self.getMeasurement() is np.NaN:
-            return false
-        else:
-            return self.mydict['MIN'] <= self.getMeasurement() <= self.mydict['MAX']    
+        return self.mydict['MIN'] <= self.getMeasurement() <= self.mydict['MAX']    
     def getStringName(self):
         return self.mydict['Quantity']
     def getChannel(self):
