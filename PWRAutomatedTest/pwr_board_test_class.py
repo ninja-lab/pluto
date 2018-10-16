@@ -29,8 +29,8 @@ class pwr_board_test_class():
         return self.mydict['UNITS']
     
     def report(self):
-        return 'Test {}: Measured: {:.2f}{}, Status: {}'.format(
-            self.mydict['TEST #'], self.getMeasurement(), self.getUnits(), self.isValid())
+        return 'Test {} {}: Measured: {:.2f}{}, Status: {}'.format(
+            self.mydict['TEST #'],self.mydict['NAME'], self.getMeasurement(), self.getUnits(), self.isValid())
         
 class quantity():
     def __init__(self, adict):

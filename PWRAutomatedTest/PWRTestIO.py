@@ -70,7 +70,7 @@ def discharge_caps(vgs, HVCAPquantity, BuckCurrentquantity, daq):
     if voltage < 1 and current < .1:
         set_discharge_Vgs(daq, 10)
         time.sleep(5)
-        print('caps are be discharged')
+        print('caps are discharged')
         set_discharge_Vgs(daq, 0)
         return 
     else:
