@@ -186,7 +186,7 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         self.byte2 = val
         self.inst.write('SOURCe:DIGital:DATA:BYTE {},(@{})'.format(val, 102)) 
 
-    def monitor(self, quantity):
+    def monitorQuantity(self, quantity):
         channel_num = quantity.getChannel()
         self.configure_DCV_channels('(@{})'.format(channel_num))
         time.sleep(.2)
@@ -199,7 +199,10 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         self.inst.write('ROUTe:MONitor (@{})'.format(channel_num))
         time.sleep(.2)
         self.inst.write('ROUTe:MONitor:STATe ON')
-        
+    def monitor(self, channel_num):
+        self.inst.write('ROUTe:MONitor (@{})'.format(channel_num))
+        time.sleep(.2)
+        self.inst.write('ROUTe:MONitor:STATe ON')
     def monitorData(self):
         return float(self.inst.query('ROUTe:MONitor:DATA?'))
     def setScale(self, scale, channel_num):
