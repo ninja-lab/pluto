@@ -5,6 +5,7 @@ Created on Mon Sep 24 13:27:08 2018
 @author: Erik
 """
 import numpy as np
+import pandas as pd
 
 class pwr_board_test_class():
 
@@ -22,8 +23,9 @@ class pwr_board_test_class():
         return self.mydict['MEASURED']
     
     def isValid(self):
-
-        return self.mydict['MIN'] <= self.getMeasurement() <= self.mydict['MAX']
+        val = self.mydict['MIN'] <= self.getMeasurement() <= self.mydict['MAX']
+        self.mydict['PASS/FAIL'] = val
+        return val
     
     def getUnits(self):
         return self.mydict['UNITS']
@@ -31,7 +33,8 @@ class pwr_board_test_class():
     def report(self):
         return 'Test {} {}: Measured: {:.2f}{}, Status: {}'.format(
             self.mydict['TEST #'],self.mydict['NAME'], self.getMeasurement(), self.getUnits(), self.isValid())
-        
+    def toSeries(self):
+        return pd.Series(self.mydict)
 class quantity():
     def __init__(self, adict):
         self.mydict=adict
@@ -63,6 +66,5 @@ class quantity():
         return self.mydict['Quantity']
     def getChannel(self):
         return self.mydict['CHANNEL']  
-    
     def clearMeasurement(self):
         self.setMeasurement(np.NaN)
