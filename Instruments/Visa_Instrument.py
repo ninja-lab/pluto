@@ -1,5 +1,3 @@
-import numpy as np
-
 
 class Visa_Instrument:
     """ The base class for a serial instrument.
@@ -121,5 +119,10 @@ class Visa_Instrument:
         '''
         print(self.readESR())
         return self.query('ENVMSG?')
+    
+    def close(self):
+        #self.inst.clear()
+        self.inst.before_close()
+        self.inst.close()
     
     
