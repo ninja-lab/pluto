@@ -2,3 +2,6 @@
 PWRAutomatedTest/~$PWR_Board_TestReportTemplate.xlsx
 .ipynb_checkpoints/
 __pycache__/
+*.ipynb_checkpoints/
+*.pyc
+*.pyd
