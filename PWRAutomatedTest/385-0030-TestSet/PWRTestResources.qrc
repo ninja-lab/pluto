@@ -1,0 +1,8 @@
+<RCC>
+  <qresource prefix="Exit">
+    <file>exit2.png</file>
+  </qresource>
+  <qresource prefix="Amber">
+    <file>A.PNG</file>
+  </qresource>
+</RCC>

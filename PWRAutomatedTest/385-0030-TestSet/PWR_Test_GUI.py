@@ -5,12 +5,13 @@ Created on Tue Feb  5 10:11:55 2019
 @author: Erik
 """
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QLabel, QAction, qApp
-from PyQt5.QtGui import QIcon, QPixmap
-from PyQt5.QtCore import QSize, Qt
+from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, qApp#, QLabel, QAction
+#from PyQt5.QtGui import QIcon, QPixmap
+#from PyQt5.QtCore import QSize, Qt
 from PyQt5 import uic
 import pandas as pd
 from PandasModel import PandasModel
+import PWRTestResources_rc
 qtCreatorFile = "385-0030-RevD-GUI.ui"
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
  
@@ -28,25 +29,9 @@ class MyApp(QMainWindow, Ui_MainWindow):
         self.StartTestButton.setEnabled(False)
         self.ConfigFileLineEdit.editingFinished.connect(self.loadTableData)
         self.data = None
-        self.ConfigFilePath = None
-        #self.AKlogo = QPixmap('AK_Horizontal_FullColor_RBG.png').scaled(QSize(200,75),Qt.KeepAspectRatio)
-        #self.AKlabel = QLabel()
-        #self.AKlabel.setPixmap(self.AKlogo)
-        #self.AKlabel.setFixedSize(200,75)
-
-        exitAct = QAction(QIcon('exit2.png'), '&Exit', self)        
-        exitAct.setShortcut('Ctrl+Q')
-        exitAct.setStatusTip('Exit application')
-        exitAct.triggered.connect(self.centralWidget().close)
-        exitAct.triggered.connect(qApp.closeAllWindows)        
-        
-        menubar = self.menuBar()
-        fileMenu = menubar.addMenu('&File')
-        fileMenu.addAction(exitAct)
-        #self.statusBar().showMessage('Ready')
-        self.setWindowTitle('Amber Kinetics Power Board GUI')  
-        self.setWindowIcon(QIcon('A.png'))
-        self.setGeometry(200, 200, 1400, 700)
+        self.ConfigFilePath = None       
+        self.actionQuit.triggered.connect(qApp.closeAllWindows)
+        self.setGeometry(100, 100, 400, 400)
  
     def updateModelData(self):
         return 

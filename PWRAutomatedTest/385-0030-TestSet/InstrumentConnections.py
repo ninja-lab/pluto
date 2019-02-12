@@ -39,6 +39,7 @@ class InstrumentConnections(QThread):
         
         return
     
+    
 
     def Connect(self):
     
