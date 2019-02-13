@@ -6,17 +6,21 @@ Created on Tue Feb  5 10:11:55 2019
 """
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, qApp#, QLabel, QAction
-#from PyQt5.QtGui import QIcon, QPixmap
-#from PyQt5.QtCore import QSize, Qt
+from PyQt5.QtCore import pyqtSignal, QThread
 from PyQt5 import uic
 import pandas as pd
 from PandasModel import PandasModel
 import PWRTestResources_rc
 qtCreatorFile = "385-0030-RevD-GUI.ui"
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
- 
-class MyApp(QMainWindow, Ui_MainWindow):
-       
+pd.set_option('precision', 1)
+class MyApp(QMainWindow, Ui_MainWindow, QThread):
+    '''
+    This signal tells the Tester object that it can read the Quantities tab
+    of the Config File
+    '''
+    ConfigFilePathObtained = pyqtSignal(str)
+    
     def __init__(self):
         QMainWindow.__init__(self)
         Ui_MainWindow.__init__(self)
@@ -32,19 +36,21 @@ class MyApp(QMainWindow, Ui_MainWindow):
         self.ConfigFilePath = None       
         self.actionQuit.triggered.connect(qApp.closeAllWindows)
         self.setGeometry(100, 100, 400, 400)
+
  
     def updateModelData(self):
         return 
-    
+
     def loadTableData(self):
         '''
         This is called after a path to the config file is obtained. 
-        The config file is a csv.
+        The config file is effectively the test matrix. 
+        It is also where the information regarding channel assignments in
+        the DAQ is kept. 
         '''
         self.data = pd.read_excel(self.ConfigFilePath, 'Report')
         self.model = PandasModel(self.data)
         self.tableView.setModel(self.model)
-       
         
     def showTestingPage(self):
         self.stackedWidget.setCurrentIndex(0)
@@ -85,11 +91,11 @@ class MyApp(QMainWindow, Ui_MainWindow):
         options |= QFileDialog.DontUseNativeDialog
         fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;Python Files (*.py)", options=options)
         if fileName:
-            #print(fileName)
             self.ConfigFileLineEdit.setText(fileName)
             self.ConfigFilePath = fileName
+            #could probably consolidate these into one signal:
             self.ConfigFileLineEdit.editingFinished.emit()
-
+            self.ConfigFilePathObtained.emit(self.ConfigFilePath)
         
 if __name__ == "__main__":
     app = QApplication(sys.argv)

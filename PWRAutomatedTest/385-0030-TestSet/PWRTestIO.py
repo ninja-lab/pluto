@@ -5,7 +5,7 @@ Created on Wed Oct  3 14:15:10 2018
 @author: Erik
 """
 import time
-from scipy.optimize import curve_fit
+#from scipy.optimize import curve_fit
 import numpy as np
 
 def open_rl1(daq):
@@ -82,12 +82,7 @@ def discharge_caps(vgs, HVCAPquantity, BuckCurrentquantity, daq):
         else:
             discharge_caps(vgs,HVCAPquantity,BuckCurrentquantity,daq)
             
-            
-def get_tau(xdata, ydata, dclevel):
-    def func(x, a, b, c):
-        return a * np.exp(-b * x) + c
-    popt, pcov = curve_fit(func, xdata, ydata, p0=[dclevel,.15,0])
-    return round(1/popt[1],3)    
+
 
 
 

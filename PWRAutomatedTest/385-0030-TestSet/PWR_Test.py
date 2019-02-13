@@ -12,28 +12,36 @@ from PWR_Test_GUI import MyApp
 from Tester import Tester
 from InstrumentConnections import InstrumentConnections
 import pyvisa
-myInstruments = InstrumentConnections(rm=pyvisa.ResourceManager()) 
+myResources = InstrumentConnections(rm=pyvisa.ResourceManager()) 
 
 app = QApplication(sys.argv)
 window = MyApp()
 window.show()
 
 
-myTester = Tester()
+myTester = Tester(myResources)
 '''
 To start a test, all the instruments have to be connected, 
 and the user has to enter a valid serial number. 
 Only then is the StartTestButton enabled. 
 '''
 
-window.PSW80ConnectButton.pressed.connect(myInstruments.Connect)
-window.RefreshButton.pressed.connect(myInstruments.Refresh)
+window.PSW80ConnectButton.pressed.connect(myResources.Connect)
+window.RefreshButton.pressed.connect(myResources.Refresh)
 window.DUTSerialNumberLineEdit.textChanged.connect(myTester.takeDUTSerialNumber)
 window.DUTSerialNumberLineEdit.editingFinished.connect(window.checkDUTSerialNumber)
-myInstruments.PSW80ConnectResult.connect(window.PSW80LineEdit.setText)
-myInstruments.PSW800ConnectResult.connect(window.PSW800LineEdit.setText)
-myInstruments.KeysightConnectResult.connect(window.KeysightLineEdit.setText)
-myInstruments.ConnectResult.connect(window.takeConnectResult)
+'''window.checkDUTSerialNumber will call window.checkStartConditions() if the serial number is valid (based on some
+potential requirements of form)
+'''
+myResources.PSW80ConnectResult.connect(window.PSW80LineEdit.setText)
+myResources.PSW800ConnectResult.connect(window.PSW800LineEdit.setText)
+myResources.KeysightConnectResult.connect(window.KeysightLineEdit.setText)
+myResources.ConnectResult.connect(window.takeConnectResult)
+'''window.takeConnectResult() will also call window.checkStartConditions(), which enables the 
+StartTestButton() if both the DUT serial number is valid, and the instruments are connected. 
+'''
+window.ConfigFilePathObtained.connect(myTester.takeConfigFilePath)
+window.StartTestButton.clicked.connect(myTester.startTest)
 
 sys.exit(app.exec_())
 

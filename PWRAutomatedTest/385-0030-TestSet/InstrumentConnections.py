@@ -39,6 +39,12 @@ class InstrumentConnections(QThread):
         
         return
     
+    def get_lv_supply(self):
+        return self.lv_supply
+    def get_hv_supply(self):
+        return self.hv_supply
+    def get_daq(self):
+        return self.daq
     
 
     def Connect(self):
@@ -73,6 +79,7 @@ class InstrumentConnections(QThread):
             if self.daq is None:
                 self.KeysightConnectResult.emit('Could not connect!')
             self.ConnectResult.emit(False)
+            
     def Refresh(self):
         if self.lv_supply is not None:
             self.lv_supply.close()

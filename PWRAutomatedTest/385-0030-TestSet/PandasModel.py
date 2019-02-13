@@ -22,9 +22,15 @@ class PandasModel(QtCore.QAbstractTableModel):
         return self._data.shape[1]
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
+
         if index.isValid():
             if role == QtCore.Qt.DisplayRole:
+                if index.column() == 3 or index.column()==4:
+                    return '{:.3f}'.format(self._data.iloc[index.row(), index.column()])    
+                if index.column() == 0:
+                    return '{:.2f}'.format(self._data.iloc[index.row(), index.column()])
                 return str(self._data.iloc[index.row(), index.column()])
+                
         return None
 
     def headerData(self, col, orientation, role):
