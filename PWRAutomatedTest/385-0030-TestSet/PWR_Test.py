@@ -12,14 +12,13 @@ from PWR_Test_GUI import MyApp
 from Tester import Tester
 from InstrumentConnections import InstrumentConnections
 import pyvisa
-myResources = InstrumentConnections(rm=pyvisa.ResourceManager()) 
+myResources = InstrumentConnections(pyvisa.ResourceManager()) 
 
 app = QApplication(sys.argv)
 window = MyApp()
 window.show()
 
-
-myTester = Tester(myResources)
+myTester = Tester(myResources, window.getModel())
 '''
 To start a test, all the instruments have to be connected, 
 and the user has to enter a valid serial number. 

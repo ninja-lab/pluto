@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (QWidget, QApplication, QTableView,
         QVBoxLayout)
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 import sys
-from TableItems import TableItemFloat, PandasModel
+from .\PandasModel import  PandasModel
 #import yaml
 #myFile = open('config.yaml')
 #data = yaml.load(myFile)
@@ -38,7 +38,7 @@ class Example(QWidget):
         data =  pd.DataFrame(np.random.randn(6, 6))
         data[0][1] = 'hello'
         self.model = PandasModel(data)
-        self.model.setData(self.model.index(3,3),999)
+        self.model.setData(self.model.index(1,5),999)
     def initUI(self):
              
         self.tv = QTableView(self)

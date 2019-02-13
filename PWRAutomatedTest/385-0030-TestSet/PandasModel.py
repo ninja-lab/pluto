@@ -32,6 +32,19 @@ class PandasModel(QtCore.QAbstractTableModel):
                 return str(self._data.iloc[index.row(), index.column()])
                 
         return None
+    
+    def getMinimum(self, row):
+        return self._data.iloc(row, self.getColumnNumber('MIN'))
+    def getMaximum(self, row):
+        return self._data.iloc(row, self.getColumnNumber('MAX'))
+    
+    def getColumnNumber(self, string):
+        '''
+        Given a string that identifies a label/column, 
+        return the location of that label/column.
+        This enables the config file columns to be moved around. 
+        '''
+        return self._data.columns.loc(string)
 
     def headerData(self, col, orientation, role):
         if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:

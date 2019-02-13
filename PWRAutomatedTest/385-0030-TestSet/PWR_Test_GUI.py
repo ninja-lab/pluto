@@ -18,6 +18,9 @@ class MyApp(QMainWindow, Ui_MainWindow, QThread):
     '''
     This signal tells the Tester object that it can read the Quantities tab
     of the Config File
+    This class inherits from QThread because it needs a signal that passes 
+    the config file path out. The Tester object needs the path so it can 
+    read the 'quantities' sheet. 
     '''
     ConfigFilePathObtained = pyqtSignal(str)
     
@@ -51,7 +54,8 @@ class MyApp(QMainWindow, Ui_MainWindow, QThread):
         self.data = pd.read_excel(self.ConfigFilePath, 'Report')
         self.model = PandasModel(self.data)
         self.tableView.setModel(self.model)
-        
+    def getModel(self):
+        return self.model
     def showTestingPage(self):
         self.stackedWidget.setCurrentIndex(0)
         self.InstrumentsPageButton.setChecked(False)
