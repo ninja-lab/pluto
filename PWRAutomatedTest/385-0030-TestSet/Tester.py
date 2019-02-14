@@ -10,23 +10,16 @@ import numpy as np
 from pwr_board_test_class import quantity
 import pandas as pd
 from datetime import datetime
-class Tester():
+from PWR_Test_GUI import MyApp
+class Tester(MyApp):
 
-    
-    def __init__(self, myResources, model):
+    def __init__(self, myResources):
+        MyApp.__init__(self)
         self.currentDUTSerialNumber = None
-        self.quantity_df = None
         self.myResources = myResources
-        self.model = model
         self.currentTest = 0
-        return
     
-    def takeDUTSerialNumber(self, string):
-        self.currentDUTSerialNumber = string
-        return
-    
-    def takeConfigFilePath(self, string):
-        self.ConfigFilePath = string
+    def startTest(self):
         self.quantity_df = pd.read_excel(self.ConfigFilePath, 'Quantities')
         self.quantities = {}
         for row in self.quantity_df.iterrows():
@@ -39,48 +32,48 @@ class Tester():
             self.quantities[new_quantity.getStringName()] = new_quantity
         self.measurement_column = self.model.getColumnNumber('MEASURED')
         self.time_column = self.model.getColumnNumber('TIMESTAMP') 
-   
-    def startTest(self):
+
+        
+        
         self.currentRow = 0
-        try:
+        #try:
             
-            self.runtest1()
-            self.runtest2()
-            self.runtest2()
-            self.runtest3()
-            self.runtest4()
-            self.runtest5()
-            self.runtest6()
-            self.runtest7()
+        #self.runtest1()
+        self.runtest2()
+        self.runtest3()
+        self.runtest4()
+        self.runtest5()
+        self.runtest6()
+        self.runtest7()
+        
+        self.runtest8()
+        '''tests 9-14 test HV Diodes, so do some set up common to all'''
+        self.myResources.hv_supply.set_rising_voltage_slew(50) #50V/sec
+        self.myResources.hv_supply.set_output_mode(2) #slew rate priority (ramp slowly)
+        self.myResources.hv_supply.apply(840, 10e-3)
+        
+        self.runtest9()
+        self.runtest10()
+        self.runtest11()
+        self.runtest12()
+        self.runtest13()
+        self.runtest14()
+        self.runtest15()
+        self.runtest16()
+        self.runtest17()
+        self.runtest18()
+        self.runtest19()
+        self.runtest20()
+        self.runtest21()
             
-            self.runtest8()
-            '''tests 9-14 test HV Diodes, so do some set up common to all'''
-            self.myResources.hv_supply.set_rising_voltage_slew(50) #50V/sec
-            self.myResources.hv_supply.set_output_mode(2) #slew rate priority (ramp slowly)
-            self.apply(840, 10e-3)
-            
-            self.runtest9()
-            self.runtest10()
-            self.runtest11()
-            self.runtest12()
-            self.runtest13()
-            self.runtest14()
-            self.runtest15()
-            self.runtest16()
-            self.runtest17()
-            self.runtest18()
-            self.runtest19()
-            self.runtest20()
-            self.runtest21()
-            
-        except TestFailure:
+        #except Exception:
             
             
-            return
+        return
         
     def updateModel(self, row, val):
         self.model.setData(self.model.index(row, self.measurement_column), val)
-        self.model.setData(self.model.index(row, self.time_column), datetime.now().strftime('%Y-%m-%d,%H:%M:%S'))
+        self.model.setData(self.model.index(row, self.time_column), datetime.now())
         
     def runtest1(self):
         row = 1
@@ -109,13 +102,13 @@ class Tester():
     def runtest3(self):
         return
             
-    def runtest4():
+    def runtest4(self):
         return
-    def runtest5():
+    def runtest5(self):
         return
-    def runtest6():
+    def runtest6(self):
         return
-    def runtest7():
+    def runtest7(self):
         return
      
     def runtest8(self):
@@ -130,7 +123,7 @@ class Tester():
         
         self.myResources.hv_supply.set_output('ON')
         while self.myResources.hv_supply.get_voltage() < 830:
-            if self.myResources.get_current_protection_state():
+            if self.myResources.hv_supply.get_current_protection_state():
                 self.myResources.hv_supply.set_output('OFF')
                 break
             time.sleep(.3)

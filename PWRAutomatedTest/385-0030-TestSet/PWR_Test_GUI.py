@@ -14,7 +14,7 @@ import PWRTestResources_rc
 qtCreatorFile = "385-0030-RevD-GUI.ui"
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
 pd.set_option('precision', 1)
-class MyApp(QMainWindow, Ui_MainWindow, QThread):
+class MyApp(QMainWindow, Ui_MainWindow):
     '''
     This signal tells the Tester object that it can read the Quantities tab
     of the Config File
@@ -22,7 +22,7 @@ class MyApp(QMainWindow, Ui_MainWindow, QThread):
     the config file path out. The Tester object needs the path so it can 
     read the 'quantities' sheet. 
     '''
-    ConfigFilePathObtained = pyqtSignal(str)
+  
     
     def __init__(self):
         QMainWindow.__init__(self)
@@ -39,7 +39,7 @@ class MyApp(QMainWindow, Ui_MainWindow, QThread):
         self.ConfigFilePath = None       
         self.actionQuit.triggered.connect(qApp.closeAllWindows)
         self.setGeometry(100, 100, 400, 400)
-
+        self.DUTSerialNumber = None
  
     def updateModelData(self):
         return 
@@ -52,10 +52,11 @@ class MyApp(QMainWindow, Ui_MainWindow, QThread):
         the DAQ is kept. 
         '''
         self.data = pd.read_excel(self.ConfigFilePath, 'Report')
+        #otherwise the TIMESTAMP column is loaded as NaN which is float
+        self.data['TIMESTAMP'] = pd.to_datetime(self.data['TIMESTAMP'])
         self.model = PandasModel(self.data)
         self.tableView.setModel(self.model)
-    def getModel(self):
-        return self.model
+
     def showTestingPage(self):
         self.stackedWidget.setCurrentIndex(0)
         self.InstrumentsPageButton.setChecked(False)
@@ -65,8 +66,8 @@ class MyApp(QMainWindow, Ui_MainWindow, QThread):
         self.TestingPageButton.setChecked(False)
         
     def checkDUTSerialNumber(self):
-        DUTSerialNumber = self.DUTSerialNumberLineEdit.text()
-        if DUTSerialNumber is not None:
+        self.DUTSerialNumber = self.DUTSerialNumberLineEdit.text()
+        if self.DUTSerialNumber is not None:
             self.validDUTSerialNumber = True
         self.checkStartConditions()
         
@@ -97,9 +98,8 @@ class MyApp(QMainWindow, Ui_MainWindow, QThread):
         if fileName:
             self.ConfigFileLineEdit.setText(fileName)
             self.ConfigFilePath = fileName
-            #could probably consolidate these into one signal:
             self.ConfigFileLineEdit.editingFinished.emit()
-            self.ConfigFilePathObtained.emit(self.ConfigFilePath)
+
         
 if __name__ == "__main__":
     app = QApplication(sys.argv)
