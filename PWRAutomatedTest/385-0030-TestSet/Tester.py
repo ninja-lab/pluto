@@ -58,6 +58,9 @@ class Tester(MyApp):
         self.runtest12()
         self.runtest13()
         self.runtest14()
+        
+        self.myResources.hv_supply.apply(0,0)
+        
         self.runtest15()
         self.runtest16()
         self.runtest17()
@@ -123,12 +126,14 @@ class Tester(MyApp):
         
         self.myResources.hv_supply.set_output('ON')
         while self.myResources.hv_supply.get_voltage() < 830:
-            if self.myResources.hv_supply.get_current_protection_state():
+            if self.myResources.hv_supply.get_protection_state():
                 self.myResources.hv_supply.set_output('OFF')
+                print('current_limit!')
                 break
             time.sleep(.3)
         current = self.myResources.hv_supply.get_current()
         self.updateModel(9, current)
+        self.myResources.hv_supply.set_output('OFF')
         return
     def runtest10(self):
         return
