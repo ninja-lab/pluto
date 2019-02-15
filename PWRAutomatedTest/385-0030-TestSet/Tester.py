@@ -20,6 +20,10 @@ class Tester(MyApp):
         self.currentTest = 0
     
     def startTest(self):
+        '''
+        The quanitity objects allow a convenient way to capture a signal name, 
+        a channel assignment, any scale or offset, and a measure() function. 
+        '''
         self.quantity_df = pd.read_excel(self.ConfigFilePath, 'Quantities')
         self.quantities = {}
         for row in self.quantity_df.iterrows():
@@ -30,6 +34,8 @@ class Tester(MyApp):
                 my_dict[column_name] = ser[column_name]
             new_quantity = quantity(my_dict)
             self.quantities[new_quantity.getStringName()] = new_quantity
+        
+        
         self.measurement_column = self.model.getColumnNumber('MEASURED')
         self.time_column = self.model.getColumnNumber('TIMESTAMP') 
 
@@ -52,14 +58,18 @@ class Tester(MyApp):
         self.myResources.hv_supply.set_output_mode(2) #slew rate priority (ramp slowly)
         self.myResources.hv_supply.apply(840, 10e-3)
         
-        self.runtest9()
-        self.runtest10()
-        self.runtest11()
-        self.runtest12()
-        self.runtest13()
-        self.runtest14()
-        
+        self.runtest9() #HV diode test
+        self.runtest10()#HV diode test
+        self.runtest11()#HV diode test
+        self.runtest12()#HV diode test
+        self.runtest13()#HV diode test
+        self.runtest14()#HV diode test
+        '''
+        Undo the setup from HV Diode checks:
+        '''
         self.myResources.hv_supply.apply(0,0)
+    
+        self.SetupNoPowerState()
         
         self.runtest15()
         self.runtest16()
@@ -99,7 +109,7 @@ class Tester(MyApp):
    
         
     def runtest2(self):
-        print("great job!")
+        #print("great job!")
         return
 
     def runtest3(self):
@@ -119,6 +129,7 @@ class Tester(MyApp):
     def runtest9(self):
         '''Impose 840 V on DC bus and read back current draw
         '''
+        row = 9
         open_rl1(self.myResources.daq)
         open_rl2(self.myResources.daq)
         open_rl3(self.myResources.daq)
@@ -132,7 +143,7 @@ class Tester(MyApp):
                 break
             time.sleep(.3)
         current = self.myResources.hv_supply.get_current()
-        self.updateModel(9, current)
+        self.updateModel(row, current)
         self.myResources.hv_supply.set_output('OFF')
         return
     def runtest10(self):
@@ -145,10 +156,35 @@ class Tester(MyApp):
         return
     def runtest14(self):
         return
+    def SetupNoPowerState(self):
+        
+        self.myResources.daq.configure_DCV_channels('(@201:208,210:215)')
+        self.myResources.daq.format_reading(time=0, channel=0)
+        #self.myResources.daq.format_time_type(time_type='ABS')        
+        for my_quantity in self.quantities.values():
+            self.myResources.daq.setScale(my_quantity.getScale(), my_quantity.getChannel())
+            self.myResources.daq.setOffset(my_quantity.getOffset(), my_quantity.getChannel())
+        self.myResources.daq.useScaling()
+        
+                          
     def runtest15(self):
+        '''
+        Read all channels to verify no power state.
+        The setup is already done with SetupNoPowerState()
+        Perform the scan and read all channels. 
+        
+        '''
+        start_row = 14
+        end_row = 27
+        data = self.myResources.daq.read()
+        combined = zip(np.arange(start_row, end_row+1), data)
+        for pair in combined:
+            self.updateModel(pair[0],pair[1])
+    
         return
     
     def runtest16(self):
+        row = 29
         return
     def runtest17(self):
         return  

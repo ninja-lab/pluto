@@ -8,7 +8,7 @@ import numpy as np
 import time
 from datetime import datetime
 import matplotlib.pyplot as plt
-import plotting
+#import plotting
 
 rm = pyvisa.ResourceManager()
 for resource_id in rm.list_resources():
@@ -28,7 +28,7 @@ for resource_id in rm.list_resources():
     except pyvisa.errors.VisaIOError:
         print(resource_id + " is not what we're looking for, continuing...\n")
         
-        
+'''        
 freq = 10.0
 ampl = 1.0
 offset = .5
@@ -59,3 +59,4 @@ DCsupply.turn_off(3)
 #plotting.easy_plot(results['temp'], results['time [sec]'],'temperature', 'temperature [C]', 'elapsed time [sec]', 'Thermocouple data log test')
 plt.plot(results['time [sec]'],results['temp'])
 plt.show()
+'''

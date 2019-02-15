@@ -30,7 +30,7 @@ class Visa_Instrument:
         """ Resets the instrument.
         This is a fairly universal command so should work on most devices.
         """
-        print("Resetting machine")
+        #print("Resetting machine")
         self.inst.write("*RST")
 
     def query(self, command):

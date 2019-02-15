@@ -41,9 +41,11 @@ class MyApp(QMainWindow, Ui_MainWindow):
         self.setGeometry(100, 100, 400, 400)
         self.DUTSerialNumber = None
  
-    def updateModelData(self):
+    def takeResult(self, testNumber, result):
         return 
-
+    def findTestNumber(self, state, quantityName):
+        return
+    
     def loadTableData(self):
         '''
         This is called after a path to the config file is obtained. 
@@ -81,7 +83,8 @@ class MyApp(QMainWindow, Ui_MainWindow):
     '''   
     def checkStartConditions(self):
         #probably need more robust checking on form of serial number
-        if self.instrumentsConnected and self.validDUTSerialNumber:
+    
+        if self.instrumentsConnected and self.validDUTSerialNumber and (self.ConfigFilePath is not None):
             self.StartTestButton.setEnabled(True)
             self.TestInfoLineEdit.setText('You can start the test!')
         else: 
@@ -90,6 +93,8 @@ class MyApp(QMainWindow, Ui_MainWindow):
                 self.TestInfoLineEdit.setText('Instruments are not connected!')
             elif not self.validDUTSerialNumber:
                 self.TestInfoLineEdit.setText('Enter DUT Serial Number!')
+            elif self.ConfigFilePath is None:
+                self.TestInfoLineEdit.setText('Find the Config file!')
     
     def openFileNameDialog(self):
         options = QFileDialog.Options()
@@ -99,6 +104,7 @@ class MyApp(QMainWindow, Ui_MainWindow):
             self.ConfigFileLineEdit.setText(fileName)
             self.ConfigFilePath = fileName
             self.ConfigFileLineEdit.editingFinished.emit()
+            self.checkStartConditions()
 
         
 if __name__ == "__main__":

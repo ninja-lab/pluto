@@ -1,7 +1,7 @@
 
 import Visa_Instrument
-import pyvisa
-import sys
+#import pyvisa
+#import sys
 import time
 
 class Keysight34972A(Visa_Instrument.Visa_Instrument):
@@ -25,6 +25,7 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         super().__init__(resource, debug)
         self.inst.timeout = 5000
         self.inst.read_termination = '\n'
+        self.sendReset()
         '''
         The istrument cannot report what is on the digital output ports, 
         so the info is stored here and kept updated. 
@@ -129,6 +130,41 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         '''
         data = self.inst.query('READ?')
         return [float(el) for el in data.split(',')]
+    def read_with_absolute_time(self):
+        '''
+        This function assumes that format_reading has been called
+        with format_reading(time=1, channel=1)
+        The readings come back in a string:
+            measurement1, year1, month1, day1, hour1, min1, sec1, channel,
+            measurement2, year2, ...
+        Returns:
+            A dictionary of dictionarys. 
+            {'201':{'measurement': val,
+                    'year': val,
+                    ...}
+             '202':{'measurement': val,
+                    'year': val,
+                    ...}
+        '''
+        def makedict(alist):
+            mydict = {}
+            mydict['Measurement'] = float(alist[0])
+            mydict['year'] = int(alist[1])
+            mydict['month'] = int(alist[2])
+            mydict['day'] = int(alist[3])
+            mydict['hour'] = int(alist[4])
+            mydict['minute'] = int(alist[5])
+            mydict['sec'] = float(alist[6])
+            return mydict
+        data = self.inst.query('READ?').split(',')
+        num_readings = int(len(data)/8)
+        total_dict = {}
+        for i in [j*8 for j in range(num_readings)]:
+            single_meas = data[i:i+8] #8 things, 0-7
+            total_dict[single_meas[7]] = makedict(single_meas[0:7])
+        return total_dict
+            
+            
         
     def format_reading(self, time=0, channel=0, alarm=0):
         self.inst.write('FORMat:READing:ALARm {}'.format(alarm))
@@ -138,7 +174,10 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
     
     def format_time_type(self, time_type='RELative'):
         self.inst.write('FORMat:READing:TIME:TYPE {}'.format(time_type))
-    
+    def set_time(self, stamp):
+        
+        self.inst.write('SYSTem:TIME {}, {}, {:.3f}'.format(stamp.hour, stamp.minute, stamp.second+stamp.microsecond/1e6))
+        self.inst.write('SYStem:DATE {}, {}, {}'.format(stamp.year, stamp.month, stamp.day))
     def analog_source(self, channel, voltage):
         '''
         use the multifunction module 34907A DAC to source 

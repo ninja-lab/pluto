@@ -7,6 +7,12 @@ Created on Mon Sep 24 13:27:08 2018
 
 
 class quantity():
+    '''
+    These objects are populated with attributes described 
+    in the config file, on the 'quantities' page. 
+    It captures the signal name, the channel it is assigned to, 
+    and the scale and offset to be applied to the measurement, if any. 
+    '''
     def __init__(self, adict):
         self.mydict=adict
   
