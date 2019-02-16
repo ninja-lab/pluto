@@ -79,12 +79,7 @@ class MyApp(QMainWindow, Ui_MainWindow):
     def onResultReady(self, tup):
         self.model.setData(self.model.index(tup[0],self.measurement_column),tup[1])
         self.model.setData(self.model.index(tup[0],self.time_column),datetime.now())
-    '''
-    def takeResult(self, testNumber, result):
-        return 
-    def findTestNumber(self, state, quantityName):
-        return
-    '''
+
     def loadTableData(self):
         '''
         This is called after a path to the config file is obtained. 
