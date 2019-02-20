@@ -3,6 +3,7 @@ import Visa_Instrument
 #import pyvisa
 #import sys
 import time
+from datetime import datetime
 
 class Keysight34972A(Visa_Instrument.Visa_Instrument):
     
@@ -26,6 +27,7 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         self.inst.timeout = 5000
         self.inst.read_termination = '\n'
         self.sendReset()
+        self.set_time(datetime.now())
         '''
         The istrument cannot report what is on the digital output ports, 
         so the info is stored here and kept updated. 
@@ -134,6 +136,7 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         '''
         This function assumes that format_reading has been called
         with format_reading(time=1, channel=1)
+        Absolute or Relative time setting should also be set. 
         The readings come back in a string:
             measurement1, year1, month1, day1, hour1, min1, sec1, channel,
             measurement2, year2, ...
@@ -238,6 +241,29 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         self.inst.write('ROUTe:MONitor (@{})'.format(channel_num))
         time.sleep(.2)
         self.inst.write('ROUTe:MONitor:STATe ON')
+    
+    def setQuantityScan(self, alist):
+        '''
+        Take a list of quantity objects, set the scan list accordingly, use 
+        scaling and offset. 
+        '''
+        #build a list of channel numbers:
+        channels = [elem['CHANNEL'] for elem in alist]
+        #make a string with commas in between each channel
+        ch_str = ''
+        for ch in channels:
+            ch_str += str(ch) + ','
+        #get rid of last comma
+        ch_str = ch_str[:-1]
+        #put in form required by the instrument
+        scan_list = '(@' + ch_str + ')'
+        self.set_scan(scan_list)
+        for my_quantity in alist:
+            self.myResources.daq.setScale(my_quantity.getScale(), my_quantity.getChannel())
+            self.myResources.daq.setOffset(my_quantity.getOffset(), my_quantity.getChannel())
+        self.myResources.daq.useScaling()
+        
+    
     def monitor(self, channel_num):
         self.inst.write('ROUTe:MONitor (@{})'.format(channel_num))
         time.sleep(.2)

@@ -9,7 +9,7 @@ from PWRTestIO import *
 import numpy as np
 from pwr_board_test_class import quantity
 import pandas as pd
-#from datetime import datetime
+from datetime import datetime
 #from PWR_Test_GUI import MyApp
 from PyQt5.QtCore import  QObject, pyqtSignal, pyqtSlot
 class Tester(QObject):
@@ -221,8 +221,27 @@ class Tester(QObject):
             self.resultReady.emit(pair)
         return
     
+    def getCapChargePower(v1, t1, v2, t2):
+        
+        return
+    
     def runtest16(self):
         row = 29
+        flyback_on(daq)
+        buck_off(daq)
+        self.myResources.lv_supply.apply(24, 3)
+        alist = [self.quantities['24Vout'], self.quantites['HVCAP'], self.quantities['TP2B']]
+        self.myResources.daq.setQuantityScan(alist)
+        self.format_time_type(time_type='ABSolute')
+        self.myResources.daq.format_reading(time=1, channel=1)
+        start = datetime.now()
+        self.myResources.lv_supply.set_output('ON')
+        
+        
+        
+        
+        
+        
         return
     def runtest17(self):
         return  

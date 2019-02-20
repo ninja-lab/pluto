@@ -14,6 +14,7 @@ from PyQt5 import uic
 import pandas as pd
 from PandasModel import PandasModel
 import Tester
+import style_strings
 import PWRTestResources_rc
 qtCreatorFile = "385-0030-RevD-GUI.ui"
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
@@ -31,8 +32,8 @@ class MyApp(QMainWindow, Ui_MainWindow):
     ConfigFilePathObtained = pyqtSignal(str)
     DisplayMessage = pyqtSignal(str)
     
-    def __init__(self):
-        QMainWindow.__init__(self)
+    def __init__(self,):
+        QMainWindow.__init__(self,)
         Ui_MainWindow.__init__(self)
         self.setupUi(self)
         
@@ -41,6 +42,10 @@ class MyApp(QMainWindow, Ui_MainWindow):
         self.TestingPageButton.pressed.connect(self.showTestingPage)
         self.ConfigFileSelectButton.pressed.connect(self.openFileNameDialog)
         self.actionQuit.triggered.connect(qApp.closeAllWindows)
+        #self.actionFunky.triggered.connect(self.setFunkyStyleSheet)
+        #self.actionRetro.triggered.connect(self.setRetroStyleSheet)
+        #self.actionNone.triggered.connect(self.setNoneStyleSheet)
+        
         self.ConfigFileLineEdit.editingFinished.connect(self.loadTableData)
         
         self.DUTSerialNumberLineEdit.editingFinished.connect(self.checkDUTSerialNumber)
@@ -74,11 +79,26 @@ class MyApp(QMainWindow, Ui_MainWindow):
         self.obj.myResources.PSW800ConnectResult.connect(self.PSW800LineEdit.setText)
         self.obj.myResources.KeysightConnectResult.connect(self.KeysightLineEdit.setText)
         self.obj.myResources.ConnectResult.connect(self.takeConnectResult)
-        
-        
+    '''    
+    def setFunkyStyleSheet(self):
+        qApp.setStyleSheet(style_strings.funky)
+        #self.centralWidget.setStyleSheet(style_strings.funky)
+    def setRetroStyleSheet(self):
+        qApp.setStyleSheet(style_strings.retro)
+    def setNoneStyleSheet(self):
+        qApp.setStyleSheet('')
+        #self.centralWidget.setStyleSheet('')
+        self.scrollAreaWidgetContents.setStyleSheet('')
+   '''
     def onResultReady(self, tup):
-        self.model.setData(self.model.index(tup[0],self.measurement_column),tup[1])
-        self.model.setData(self.model.index(tup[0],self.time_column),datetime.now())
+        row = tup[0]
+        passfail_column = self.model.getColumnNumber('PASS/FAIL')
+        self.model.setData(self.model.index(row,self.measurement_column),tup[1])
+        self.model.setData(self.model.index(row,self.time_column),datetime.now())
+        if self.model.getMinimum(row) < tup[1] < self.model.getMaximum(row):
+            self.model.setData(self.model.index(row, passfail_column), 'pass')
+        else:
+            self.model.setData(self.model.index(row, passfail_column), 'FAIL!')
 
     def loadTableData(self):
         '''
@@ -89,15 +109,19 @@ class MyApp(QMainWindow, Ui_MainWindow):
         For now, the Tester class also reads from the config file, to know about min
         and max when it is useful, and to create the quantity objects. 
         '''
-        self.data = pd.read_excel(self.ConfigFilePath, 'Report')
-        #otherwise the TIMESTAMP column is loaded as NaN which is float
-        self.data['TIMESTAMP'] = pd.to_datetime(self.data['TIMESTAMP'])
-        self.model = PandasModel(self.data)
-        self.tableView.setModel(self.model)
+        try:
+            self.data = pd.read_excel(self.ConfigFilePath, 'Report')
+            #otherwise the TIMESTAMP column is loaded as NaN which is float
+            self.data['TIMESTAMP'] = pd.to_datetime(self.data['TIMESTAMP'])
+            self.data['PASS/FAIL'] = self.data['PASS/FAIL'].astype(str) 
+            self.model = PandasModel(self.data)
+            self.tableView.setModel(self.model)
         
-        self.measurement_column = self.model.getColumnNumber('MEASURED')
-        self.time_column = self.model.getColumnNumber('TIMESTAMP') 
-
+            self.measurement_column = self.model.getColumnNumber('MEASURED')
+            self.time_column = self.model.getColumnNumber('TIMESTAMP') 
+        except ValueError:
+            self.ConfigFileLineEdit.setText('That is not the config file!')
+       
     def showTestingPage(self):
         self.stackedWidget.setCurrentIndex(0)
         self.InstrumentsPageButton.setChecked(False)
@@ -148,7 +172,7 @@ class MyApp(QMainWindow, Ui_MainWindow):
 
         
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
+    app = QApplication(sys.argv)#sys.argv
     window = MyApp()
     window.show()
     sys.exit(app.exec_())
