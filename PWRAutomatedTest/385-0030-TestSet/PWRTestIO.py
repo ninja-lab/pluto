@@ -62,15 +62,14 @@ def set_discharge_Vgs(daq, voltage):
 
 def discharge_caps(vgs, HVCAPquantity, BuckCurrentquantity, daq):
     set_discharge_Vgs(daq, vgs)
-
-    HVCAPquantity.measure(daq)
-    BuckCurrentquantity.measure(daq)
-    voltage = HVCAPquantity.getMeasurement()
-    current = BuckCurrentquantity.getMeasurement()
+    #HVCAPquantity.measure(daq)
+    #BuckCurrentquantity.measure(daq)
+    voltage = HVCAPquantity.measure(daq)
+    current = BuckCurrentquantity.measure(daq)
     if voltage < 1 and current < .1:
         set_discharge_Vgs(daq, 10)
         time.sleep(5)
-        print('caps are discharged')
+        #print('caps are discharged')
         set_discharge_Vgs(daq, 0)
         return 
     else:

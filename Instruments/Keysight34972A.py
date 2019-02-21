@@ -248,7 +248,7 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         scaling and offset. 
         '''
         #build a list of channel numbers:
-        channels = [elem['CHANNEL'] for elem in alist]
+        channels = [elem.getChannel() for elem in alist]
         #make a string with commas in between each channel
         ch_str = ''
         for ch in channels:
@@ -259,9 +259,9 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         scan_list = '(@' + ch_str + ')'
         self.set_scan(scan_list)
         for my_quantity in alist:
-            self.myResources.daq.setScale(my_quantity.getScale(), my_quantity.getChannel())
-            self.myResources.daq.setOffset(my_quantity.getOffset(), my_quantity.getChannel())
-        self.myResources.daq.useScaling()
+            self.setScale(my_quantity.getScale(), my_quantity.getChannel())
+            self.setOffset(my_quantity.getOffset(), my_quantity.getChannel())
+        self.useScaling()
         
     
     def monitor(self, channel_num):

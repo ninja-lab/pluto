@@ -31,6 +31,7 @@ class MyApp(QMainWindow, Ui_MainWindow):
   
     ConfigFilePathObtained = pyqtSignal(str)
     DisplayMessage = pyqtSignal(str)
+    #giveRow = pyqtSignal()
     
     def __init__(self,):
         QMainWindow.__init__(self,)
@@ -47,7 +48,6 @@ class MyApp(QMainWindow, Ui_MainWindow):
         #self.actionNone.triggered.connect(self.setNoneStyleSheet)
         
         self.ConfigFileLineEdit.editingFinished.connect(self.loadTableData)
-        
         self.DUTSerialNumberLineEdit.editingFinished.connect(self.checkDUTSerialNumber)
         
         #intialize some fields to be used
