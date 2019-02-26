@@ -211,14 +211,110 @@ class Tester(QObject):
         self.myResources.hv_supply.set_output('OFF')
         return
     def runtest10(self):
+        '''Impose 840 V on DC bus and read back current draw
+        '''
+        self.status.emit('Running Test 10!')
+        row = 9
+        open_rl1(self.myResources.daq)
+        open_rl2(self.myResources.daq)
+        open_rl3(self.myResources.daq)
+        close_rl4(self.myResources.daq)
+        
+        self.myResources.hv_supply.set_output('ON')
+        while self.myResources.hv_supply.get_voltage() < 830:
+            self.status.emit('Test 10: Voltage still climbing')
+            if self.myResources.hv_supply.get_protection_state():
+                self.myResources.hv_supply.set_output('OFF')
+                print('current_limit!')
+                break
+            time.sleep(.3)
+        current = self.myResources.hv_supply.get_current()
+        self.resultReady.emit((row, current))
+        self.myResources.hv_supply.set_output('OFF')
         return
     def runtest11(self):
+        '''Impose 840 V on DC bus and read back current draw
+        '''
+        self.status.emit('Running Test 11!')
+        row = 10
+        open_rl1(self.myResources.daq)
+        open_rl2(self.myResources.daq)
+        close_rl3(self.myResources.daq)
+        open_rl4(self.myResources.daq)
+        
+        self.myResources.hv_supply.set_output('ON')
+        while self.myResources.hv_supply.get_voltage() < 830:
+            self.status.emit('Test 11: Voltage still climbing')
+            if self.myResources.hv_supply.get_protection_state():
+                self.myResources.hv_supply.set_output('OFF')
+                print('current_limit!')
+                break
+            time.sleep(.3)
+        current = self.myResources.hv_supply.get_current()
+        self.resultReady.emit((row, current))
+        self.myResources.hv_supply.set_output('OFF')
         return
     def runtest12(self):
+        '''Impose 840 V on DC bus and read back current draw
+        '''
+        self.status.emit('Running Test 12!')
+        row = 11
+        open_rl1(self.myResources.daq)
+        open_rl2(self.myResources.daq)
+        close_rl3(self.myResources.daq)
+        close_rl4(self.myResources.daq)
+        
+        self.myResources.hv_supply.set_output('ON')
+        while self.myResources.hv_supply.get_voltage() < 830:
+            self.status.emit('Test 12: Voltage still climbing')
+            if self.myResources.hv_supply.get_protection_state():
+                self.myResources.hv_supply.set_output('OFF')
+                print('current_limit!')
+                break
+            time.sleep(.3)
+        current = self.myResources.hv_supply.get_current()
+        self.resultReady.emit((row, current))
+        self.myResources.hv_supply.set_output('OFF')
         return
     def runtest13(self):
+        '''Impose 840 V on DC bus and read back current draw
+        '''
+        self.status.emit('Running Test 13!')
+        row = 12
+        close_rl1(self.myResources.daq)
+        open_rl2(self.myResources.daq)
+  
+        self.myResources.hv_supply.set_output('ON')
+        while self.myResources.hv_supply.get_voltage() < 830:
+            self.status.emit('Test 13: Voltage still climbing')
+            if self.myResources.hv_supply.get_protection_state():
+                self.myResources.hv_supply.set_output('OFF')
+                print('current_limit!')
+                break
+            time.sleep(.3)
+        current = self.myResources.hv_supply.get_current()
+        self.resultReady.emit((row, current))
+        self.myResources.hv_supply.set_output('OFF')
         return
     def runtest14(self):
+        '''Impose 840 V on DC bus and read back current draw
+        '''
+        self.status.emit('Running Test 14!')
+        row = 13
+        close_rl1(self.myResources.daq)
+        close_rl2(self.myResources.daq)
+  
+        self.myResources.hv_supply.set_output('ON')
+        while self.myResources.hv_supply.get_voltage() < 830:
+            self.status.emit('Test 14: Voltage still climbing')
+            if self.myResources.hv_supply.get_protection_state():
+                self.myResources.hv_supply.set_output('OFF')
+                print('current_limit!')
+                break
+            time.sleep(.3)
+        current = self.myResources.hv_supply.get_current()
+        self.resultReady.emit((row, current))
+        self.myResources.hv_supply.set_output('OFF')
         return
                         
     def runtest15(self):

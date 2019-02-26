@@ -31,6 +31,7 @@ class MyApp(QMainWindow, Ui_MainWindow):
   
     ConfigFilePathObtained = pyqtSignal(str)
     DisplayMessage = pyqtSignal(str)
+    TestCommand = pyqtSignal(alist)
     #giveRow = pyqtSignal()
     
     def __init__(self,):
@@ -57,7 +58,7 @@ class MyApp(QMainWindow, Ui_MainWindow):
         self.data = None
         self.ConfigFilePath = None       
         self.DUTSerialNumber = None
-        self.setGeometry(100, 100, 800, 800)
+        self.setGeometry(100, 100, 1200, 800)
         
         #this setup found to be necessary for the a long running test to run in the background
         self.obj = Tester.Tester(InstrumentConnections(pyvisa.ResourceManager()))
@@ -69,9 +70,12 @@ class MyApp(QMainWindow, Ui_MainWindow):
         self.thread.start()
 
         self.StopTestButton.pressed.connect(self.thread.quit)
-        self.StartTestButton.pressed.connect(self.thread.start)
-        self.StartTestButton.pressed.connect(self.obj.startTest)
-  
+        #self.StartTestButton.pressed.connect(self.thread.start)
+        #COMMENTING OUT THIS LINE TO IMPROVE TEST EXECUTION
+        #self.StartTestButton.pressed.connect(self.obj.startTest)
+        self.StartTestButton.pressed.connect(self.sendToTester)
+        
+        
         self.ConfigFilePathObtained.connect(self.obj.takeConfigFilePath)
         self.PSW80ConnectButton.pressed.connect(self.obj.myResources.Connect)
         self.RefreshButton.pressed.connect(self.obj.myResources.Refresh)
@@ -90,6 +94,14 @@ class MyApp(QMainWindow, Ui_MainWindow):
         #self.centralWidget.setStyleSheet('')
         self.scrollAreaWidgetContents.setStyleSheet('')
    '''
+    def sendToTester(self):
+        '''
+        Emit via the TestCommand signal what tests the tester needs to run, 
+        based on the checkboxes
+        '''
+        self.TestCommand.emit(self.model.getCheckedTests)
+        return
+        
     def onResultReady(self, tup):
         row = tup[0]
         passfail_column = self.model.getColumnNumber('PASS/FAIL')
@@ -114,6 +126,7 @@ class MyApp(QMainWindow, Ui_MainWindow):
             #otherwise the TIMESTAMP column is loaded as NaN which is float
             self.data['TIMESTAMP'] = pd.to_datetime(self.data['TIMESTAMP'])
             self.data['PASS/FAIL'] = self.data['PASS/FAIL'].astype(str) 
+            self.data['Check'] = True
             self.model = PandasModel(self.data)
             self.tableView.setModel(self.model)
         
