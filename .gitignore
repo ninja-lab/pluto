@@ -5,3 +5,9 @@ __pycache__/
 *.ipynb_checkpoints/
 *.pyc
 *.pyd
+PWRAutomatedTest/385-0030-TestSet/385-0030-RevD-GUI-Practice.ui
+PWRAutomatedTest/385-0030-TestSet/PracticeGUI.py
+PWRAutomatedTest/385-0030-TestSet/PracticeTest.py
+PWRAutomatedTest/385-0030-TestSet/PracticeTester.py
+master.py
+worker.py

@@ -42,8 +42,10 @@ class PandasModel(QtCore.QAbstractTableModel):
                 return QtCore.Qt.Checked if value else QtCore.Qt.Unchecked
         elif index.column() == self.getColumnNumber('MEASURED'):
             if role == QtCore.Qt.BackgroundRole:
-                if self.getMinimum(index.row()) <= value <= self.getMaximum(index.row()):
+                if (self.getMinimum(index.row()) > value) or (self.getMaximum(index.row()) < value):
                     return QtGui.QColor("red")
+                else:
+                    return QtGui. QColor("green")
     
     def getMinimum(self, row):
         return self._data.iloc[row, self.getColumnNumber('MIN')]
@@ -108,12 +110,21 @@ class PandasModel(QtCore.QAbstractTableModel):
         else:
             return False
     def getCoupledRows(self, row):
-        mask = self._data['TEST #'].values.astype(int) == int(self._data['TEST #'][row])
+        '''
+        When the user checks/unchecks a checkbox, to mark whether that test 
+        should be run or not, this function ensures the test flow still makes sense. 
+        For example, the state machine checks cannot be run individually, since 
+        the states depend on the state before and the inputs. 
+        Only the static checks can be run independently. 
+        '''
+        if row <= 13: #the last static check is in row 13, equiv. to test 14
+            return []
+        #mask = self._data['TEST #'].values.astype(int) == int(self._data['TEST #'][row])
+        mask = self._data['TEST #'].values.astype(int) >= 15
         return self._data['TEST #'][mask].index
     def getCheckedTests(self):
         '''
-        The GUI calls this method and sends the returned list
-        to the Tester via TestCommand signal. 
+        A helper function for getCheckedTests2
         Return a list corresponding to the (consolidated) checked rows
         i.e. Tests 15.1 - 15.15 are consolidated as 15 
         '''
@@ -122,4 +133,16 @@ class PandasModel(QtCore.QAbstractTableModel):
         myList = list(set(tests))
         myList.sort()                   
         return myList
-        
+    def getCheckedTests2(self):
+        '''
+        the GUI calls this method and all the checked info returned
+        as either series or DataFrames, as appropriate. 
+        The info is sent to the tester for use there:
+            For threshold sweeps, the min and max are useful to save time. 
+            The indexes are available so the Tester knows which rows to 
+            write to using resultReady() signal. 
+        '''
+        alist = []            
+        for i in self.getCheckedTests():
+            alist.append(self._data.loc[self._data['TEST #'].astype(int) == i,:])
+        return alist  

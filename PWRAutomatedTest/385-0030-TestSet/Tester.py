@@ -10,37 +10,57 @@ import numpy as np
 from pwr_board_test_class import quantity
 import pandas as pd
 from datetime import datetime
-#from PWR_Test_GUI import MyApp
 from PyQt5.QtCore import  QObject, pyqtSignal, pyqtSlot
+from threading import Thread
+
 class Tester(QObject):
     #finished = pyqtSignal()
     resultReady = pyqtSignal(tuple)
     status = pyqtSignal(str)
-    
+    testDone = pyqtSignal()
     '''
     the result tuple is sent to the GUI for update. 
     The form is: (row, value)
+    
+    Each test the user wishes to execute is known to this class.
+    One-value tests (thresholds and HV diode checks) are reported to
+    this class a pandas series. 
     '''
     
     def __init__(self, myResources):
         super().__init__()
-        self.currentDUTSerialNumber = None
         self.myResources = myResources
-        self.currentTest = 0
-        self.data = None
+        #self.testInfo = None
+        self.quantity_df = None
+        self.testInfo = None
+        self.continueTest =True
+        #self.stopThread = Thread(target = self.listenForStop, name='stop')
+        #self.stopThread.start()
+        
+        self.testFunctions = {1:self.runtest1, 2:self.runtest2, 3:self.runtest3,
+                              4:self.runtest4, 5:self.runtest5, 6:self.runtest6,
+                              7:self.runtest7, 8:self.runtest8, 9:self.runtest9,
+                              10:self.runtest10, 11:self.runtest11, 12:self.runtest12,
+                              13:self.runtest13, 14:self.runtest14}
         return
     
-    @pyqtSlot(str)
-    def takeConfigFilePath(self, string):
-        self.ConfigFilePath = string
-        
+    @pyqtSlot()
+    def listenForStop(self):
+        self.continueTest= False
+        print('heard that stop request:'.format(self.continueTest))
+        return
+    def functionMapper(self, testNumber):
+        return self.testFunctions.get(testNumber, self.runtest15)
+    
+    @pyqtSlot(list)
+    def takeTestInfo(self, alist):
+        #self.ConfigFilePath = string
+        self.quantity_df = alist[-1]
+        self.testInfo = alist[:-1]
         '''
         The quanitity objects allow a convenient way to capture a signal name, 
         a channel assignment, any scale or offset, and a measure() function. 
         '''
-
-        self.data = pd.read_excel(self.ConfigFilePath, 'Report')
-        self.quantity_df = pd.read_excel(self.ConfigFilePath, 'Quantities')
         self.quantities = {}
         for row in self.quantity_df.iterrows():
             ser = row[1] #(index, Series) comes from iterrows()
@@ -50,78 +70,67 @@ class Tester(QObject):
                 my_dict[column_name] = ser[column_name]
             new_quantity = quantity(my_dict)
             self.quantities[new_quantity.getStringName()] = new_quantity
-        return
-    @pyqtSlot()
-    def stopTest(self):
-        
+
         return
     
+    def setUpForTest(self, test):
+        
+        if 'inputDiode' in test['NAME'].iloc[0]:
+            self.status.emit('Setting up for HV Diode tests')
+            self.myResources.hv_supply.set_rising_voltage_slew(50) #50V/sec
+            self.myResources.hv_supply.set_output_mode(2) #slew rate priority (ramp slowly)
+            self.myResources.hv_supply.apply(840, 10e-3)
+            self.myResources.lv_supply.apply(0,0)
+        elif 'Threshold' in test['NAME'].iloc[0]:
+            self.status.emit('Setting up for threshold checks')
+            load1_off(self.myResources.daq)
+            load2_off(self.myResources.daq)
+            load3_off(self.myResources.daq)
+            flyback_off(self.myResources.daq)
+            buck_off(self.myResources.daq)
+            if 'PSUA' in test['TEST DESCRIPTION'].iloc[0]:
+                close_rl5(self.myResources.daq)
+            elif 'PSUB' in test['TEST DESCRIPTION'].iloc[0]:
+                open_rl5(self.myResources.daq)
+                self.myResources.hv_supply.apply(0,0)
+                self.myResources.lv_supply.apply(0,0)
+        else:
+            self.myResources.hv_supply.apply(0,0)
+            self.myResources.hv_supply.set_output_mode(0)
+            
+        return
     @pyqtSlot()
     def startTest(self):
         #loads 1-3 on 385-0046 Rev B are each 10 ohm. 24^2/10 = 57.6W
-        load1_off(self.myResources.daq)
-        load2_off(self.myResources.daq)
-        load3_off(self.myResources.daq)
-        flyback_off(self.myResources.daq)
-        buck_off(self.myResources.daq)
+        #self.continueTest=True
         self.status.emit('Starting Test!')
         
-        self.currentRow = 0
-        #try:
-            
-        #self.runtest1()
-        self.status.emit('Test 2 underway!')
-        self.runtest2()
-        self.runtest3()
-        self.runtest4()
-        self.runtest5()
-        self.runtest6()
-        self.runtest7()
+        for test in self.testInfo:
+            if self.continueTest:
+                print('In start Test: {}'.format(self.continueTest))
+                #testNumber = test['TEST #'][0].astype(int)
+                testNumber = test.iloc[0,0].astype(int)
+                self.setUpForTest(test)
+                #calling the test with the testNumber allows the 
+                #resultReady() signal to know which row to use
+                #get the test function first
+                testFunction = self.functionMapper(testNumber)
+                #call the testFunction with the starting row to write to
+                #for static checks, there is only one row. 
+                testFunction(test)
         
-        self.runtest8()
+        self.status.emit('Done the Test')
+        self.testDone.emit()
        
-        '''tests 9-14 test HV Diodes, so do some set up common to all'''
-        self.status.emit('Setting up for HV Diode tests')
-        self.myResources.hv_supply.set_rising_voltage_slew(50) #50V/sec
-        self.myResources.hv_supply.set_output_mode(2) #slew rate priority (ramp slowly)
-        self.myResources.hv_supply.apply(840, 10e-3)
+
         
-        #self.runtest9() #HV diode test
-        self.runtest10()#HV diode test
-        self.runtest11()#HV diode test
-        self.runtest12()#HV diode test
-        self.runtest13()#HV diode test
-        self.runtest14()#HV diode test
-        '''
-        Undo the setup from HV Diode checks:
-        (the power supply is already off)
-        '''
-        self.myResources.hv_supply.apply(0,0)
-        self.myResources.hv_supply.set_output_mode(0) #high speed priority on Vout
-     
         
-        self.runtest15()
-        self.runtest16()
-        self.runtest17()
-        self.runtest18()
+        #self.runtest15()
+
         '''
         Dishcharge the caps using the beefy MOSFET on the interface board:
         '''
         self.status.emit('Discharging Caps')
-        discharge_caps(2.3, self.quantities['HVCAP'], self.quantities['BuckCurrent'],
-                       self.myResources.daq)
-        cap_voltage = self.quantities['HVCAP'].measure(self.myResources.daq)
-        self.status.emit('Cap Voltage: {:.2f}V'.format(cap_voltage))
-        time.sleep(2)
-        self.runtest19()
-        self.runtest20()
-        self.runtest21()
-         
-        '''
-        Dishcharge the caps using the beefy MOSFET on the interface board:
-        '''
-        self.status.emit('Discharging Caps')
-        time.sleep(3)
         discharge_caps(2.3, self.quantities['HVCAP'], self.quantities['BuckCurrent'],
                        self.myResources.daq)
         cap_voltage = self.quantities['HVCAP'].measure(self.myResources.daq)
@@ -147,14 +156,19 @@ class Tester(QObject):
         This enables the config file columns to be moved around. 
         '''
         return self.data.columns.get_loc(string)
-    def runtest1(self):
-        row = 0
-        close_rl5(self.myResources.daq)
-        time.sleep(0.1)
+    def getRow(self, test):
+        return test['TEST #'].iloc[0].astype(int)-1
+    def runtest1(self, test):
+        '''
+        For a threshold check, the test passed in is known
+        to be a Series. 
+        '''
+        self.status.emit('Running Test 1')
+        row = self.getRow(test)
         self.myResources.lv_supply.apply(0,.1)
         self.myResources.lv_supply.set_output('ON')
-        startVoltage = self.getMinimum(row)
-        stopVoltage = self.getMaximum(row)
+        startVoltage = test['MIN'][0] #self.getMinimum(row)
+        stopVoltage = test['MAX'][0]#self.getMaximum(row)
         for i in np.arange(startVoltage, stopVoltage, .01): #sweep voltage range
             self.myResources.lv_supply.apply(i, 1) #(voltage, current)
             time.sleep(.1)
@@ -169,52 +183,51 @@ class Tester(QObject):
     
    
         
-    def runtest2(self):
-        self.resultReady.emit((1, 123234))
+    def runtest2(self, test):
+       
         return
 
-    def runtest3(self):
-        self.resultReady.emit((2,55545))
+    def runtest3(self, test):
+      
         return
             
-    def runtest4(self):
+    def runtest4(self, test):
         return
-    def runtest5(self):
+    def runtest5(self, test):
         return
-    def runtest6(self):
+    def runtest6(self, test):
         return
-    def runtest7(self):
+    def runtest7(self, test):
         return
      
-    def runtest8(self):
+    def runtest8(self,test):
         return
-    def runtest9(self):
+    def runtest9(self, test):
         '''Impose 840 V on DC bus and read back current draw
         '''
+        row = self.getRow(test)
         self.status.emit('Running Test 9!')
-        row = 8
         open_rl1(self.myResources.daq)
         open_rl2(self.myResources.daq)
         open_rl3(self.myResources.daq)
         open_rl4(self.myResources.daq)
-        
         self.myResources.hv_supply.set_output('ON')
         while self.myResources.hv_supply.get_voltage() < 830:
             self.status.emit('Test 9: Voltage still climbing')
             if self.myResources.hv_supply.get_protection_state():
                 self.myResources.hv_supply.set_output('OFF')
-                print('current_limit!')
+                self.status.emit('Current Limit!')
                 break
             time.sleep(.3)
         current = self.myResources.hv_supply.get_current()
         self.resultReady.emit((row, current))
         self.myResources.hv_supply.set_output('OFF')
         return
-    def runtest10(self):
+    def runtest10(self, test):
         '''Impose 840 V on DC bus and read back current draw
         '''
         self.status.emit('Running Test 10!')
-        row = 9
+        row = self.getRow(test)
         open_rl1(self.myResources.daq)
         open_rl2(self.myResources.daq)
         open_rl3(self.myResources.daq)
@@ -225,40 +238,39 @@ class Tester(QObject):
             self.status.emit('Test 10: Voltage still climbing')
             if self.myResources.hv_supply.get_protection_state():
                 self.myResources.hv_supply.set_output('OFF')
-                print('current_limit!')
+                self.status.emit('Current Limit!')
                 break
             time.sleep(.3)
         current = self.myResources.hv_supply.get_current()
         self.resultReady.emit((row, current))
         self.myResources.hv_supply.set_output('OFF')
         return
-    def runtest11(self):
+    def runtest11(self, test):
         '''Impose 840 V on DC bus and read back current draw
         '''
         self.status.emit('Running Test 11!')
-        row = 10
+        row = self.getRow(test)
         open_rl1(self.myResources.daq)
         open_rl2(self.myResources.daq)
         close_rl3(self.myResources.daq)
         open_rl4(self.myResources.daq)
-        
         self.myResources.hv_supply.set_output('ON')
         while self.myResources.hv_supply.get_voltage() < 830:
             self.status.emit('Test 11: Voltage still climbing')
             if self.myResources.hv_supply.get_protection_state():
                 self.myResources.hv_supply.set_output('OFF')
-                print('current_limit!')
+                self.status.emit('Current Limit!')
                 break
             time.sleep(.3)
         current = self.myResources.hv_supply.get_current()
         self.resultReady.emit((row, current))
         self.myResources.hv_supply.set_output('OFF')
         return
-    def runtest12(self):
+    def runtest12(self, test):
         '''Impose 840 V on DC bus and read back current draw
         '''
         self.status.emit('Running Test 12!')
-        row = 11
+        row = self.getRow(test)
         open_rl1(self.myResources.daq)
         open_rl2(self.myResources.daq)
         close_rl3(self.myResources.daq)
@@ -269,38 +281,37 @@ class Tester(QObject):
             self.status.emit('Test 12: Voltage still climbing')
             if self.myResources.hv_supply.get_protection_state():
                 self.myResources.hv_supply.set_output('OFF')
-                print('current_limit!')
+                self.status.emit('Current Limit!')
                 break
             time.sleep(.3)
         current = self.myResources.hv_supply.get_current()
         self.resultReady.emit((row, current))
         self.myResources.hv_supply.set_output('OFF')
         return
-    def runtest13(self):
+    def runtest13(self, test):
         '''Impose 840 V on DC bus and read back current draw
         '''
         self.status.emit('Running Test 13!')
-        row = 12
+        row = self.getRow(test)
         close_rl1(self.myResources.daq)
         open_rl2(self.myResources.daq)
-  
         self.myResources.hv_supply.set_output('ON')
         while self.myResources.hv_supply.get_voltage() < 830:
             self.status.emit('Test 13: Voltage still climbing')
             if self.myResources.hv_supply.get_protection_state():
                 self.myResources.hv_supply.set_output('OFF')
-                print('current_limit!')
+                self.status.emit('Current Limit!')
                 break
             time.sleep(.3)
         current = self.myResources.hv_supply.get_current()
         self.resultReady.emit((row, current))
         self.myResources.hv_supply.set_output('OFF')
         return
-    def runtest14(self):
+    def runtest14(self, test):
         '''Impose 840 V on DC bus and read back current draw
         '''
         self.status.emit('Running Test 14!')
-        row = 13
+        row = self.getRow(test)
         close_rl1(self.myResources.daq)
         close_rl2(self.myResources.daq)
   
@@ -309,7 +320,7 @@ class Tester(QObject):
             self.status.emit('Test 14: Voltage still climbing')
             if self.myResources.hv_supply.get_protection_state():
                 self.myResources.hv_supply.set_output('OFF')
-                print('current_limit!')
+                self.status.emit('Current Limit!')
                 break
             time.sleep(.3)
         current = self.myResources.hv_supply.get_current()
@@ -317,7 +328,7 @@ class Tester(QObject):
         self.myResources.hv_supply.set_output('OFF')
         return
                         
-    def runtest15(self):
+    def runtest15(self, test):
         '''
         Read all channels to verify no power state.
         The setup is already done with SetupNoPowerState()

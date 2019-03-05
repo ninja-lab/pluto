@@ -13,6 +13,7 @@ from InstrumentConnections import InstrumentConnections
 from PyQt5 import uic
 import pandas as pd
 from PandasModel import PandasModel
+#from PandasModel2 import PandasModel2
 import Tester
 import style_strings
 import PWRTestResources_rc
@@ -29,11 +30,11 @@ class MyApp(QMainWindow, Ui_MainWindow):
     read the 'quantities' sheet. 
     '''
   
-    ConfigFilePathObtained = pyqtSignal(str)
+    #ConfigFilePathObtained = pyqtSignal(str)
     DisplayMessage = pyqtSignal(str)
-    TestCommand = pyqtSignal(alist)
-    #giveRow = pyqtSignal()
-    
+    TestCommand = pyqtSignal(list)
+    StartSignal = pyqtSignal()
+
     def __init__(self,):
         QMainWindow.__init__(self,)
         Ui_MainWindow.__init__(self)
@@ -69,14 +70,10 @@ class MyApp(QMainWindow, Ui_MainWindow):
         self.obj.moveToThread(self.thread)
         self.thread.start()
 
-        self.StopTestButton.pressed.connect(self.thread.quit)
-        #self.StartTestButton.pressed.connect(self.thread.start)
-        #COMMENTING OUT THIS LINE TO IMPROVE TEST EXECUTION
-        #self.StartTestButton.pressed.connect(self.obj.startTest)
-        self.StartTestButton.pressed.connect(self.sendToTester)
-        
-        
-        self.ConfigFilePathObtained.connect(self.obj.takeConfigFilePath)
+        self.StartTestButton.pressed.connect(self.loadTester)
+        self.StopTestButton.pressed.connect(self.obj.listenForStop)
+        self.StartSignal.connect(self.obj.startTest)
+        self.TestCommand.connect(self.obj.takeTestInfo)
         self.PSW80ConnectButton.pressed.connect(self.obj.myResources.Connect)
         self.RefreshButton.pressed.connect(self.obj.myResources.Refresh)
         self.obj.myResources.PSW80ConnectResult.connect(self.PSW80LineEdit.setText)
@@ -94,20 +91,19 @@ class MyApp(QMainWindow, Ui_MainWindow):
         #self.centralWidget.setStyleSheet('')
         self.scrollAreaWidgetContents.setStyleSheet('')
    '''
-    def sendToTester(self):
-        '''
-        Emit via the TestCommand signal what tests the tester needs to run, 
-        based on the checkboxes
-        '''
-        self.TestCommand.emit(self.model.getCheckedTests)
+    def loadTester(self):
+        testinginfo = self.model.getCheckedTests2()
+        testinginfo.append(self.quantity_df)
+        self.TestCommand.emit(testinginfo)#sends to the tester all the test info
+        self.StartSignal.emit()#self.obj.startTest()
         return
-        
+    
     def onResultReady(self, tup):
         row = tup[0]
         passfail_column = self.model.getColumnNumber('PASS/FAIL')
         self.model.setData(self.model.index(row,self.measurement_column),tup[1])
         self.model.setData(self.model.index(row,self.time_column),datetime.now())
-        if self.model.getMinimum(row) < tup[1] < self.model.getMaximum(row):
+        if (self.model.getMinimum(row) <= tup[1]) and (tup[1] <= self.model.getMaximum(row)):
             self.model.setData(self.model.index(row, passfail_column), 'pass')
         else:
             self.model.setData(self.model.index(row, passfail_column), 'FAIL!')
@@ -126,12 +122,15 @@ class MyApp(QMainWindow, Ui_MainWindow):
             #otherwise the TIMESTAMP column is loaded as NaN which is float
             self.data['TIMESTAMP'] = pd.to_datetime(self.data['TIMESTAMP'])
             self.data['PASS/FAIL'] = self.data['PASS/FAIL'].astype(str) 
+            self.data['TEST #'] = self.data['TEST #'].astype(float)
             self.data['Check'] = True
+            #self.data['MIN']
             self.model = PandasModel(self.data)
             self.tableView.setModel(self.model)
-        
             self.measurement_column = self.model.getColumnNumber('MEASURED')
             self.time_column = self.model.getColumnNumber('TIMESTAMP') 
+            self.quantity_df = pd.read_excel(self.ConfigFilePath, 'Quantities')          
+            self.checkStartConditions() 
         except ValueError:
             self.ConfigFileLineEdit.setText('That is not the config file!')
        
@@ -180,9 +179,6 @@ class MyApp(QMainWindow, Ui_MainWindow):
             self.ConfigFileLineEdit.setText(fileName)
             self.ConfigFilePath = fileName
             self.ConfigFileLineEdit.editingFinished.emit()
-            self.ConfigFilePathObtained.emit(self.ConfigFilePath)
-            self.checkStartConditions()
-
         
 if __name__ == "__main__":
     app = QApplication(sys.argv)#sys.argv
