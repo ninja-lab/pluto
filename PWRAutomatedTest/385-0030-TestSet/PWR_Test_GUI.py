@@ -29,8 +29,7 @@ class MyApp(QMainWindow, Ui_MainWindow):
     the config file path out. The Tester object needs the path so it can 
     read the 'quantities' sheet. 
     '''
-  
-    #ConfigFilePathObtained = pyqtSignal(str)
+
     DisplayMessage = pyqtSignal(str)
     TestCommand = pyqtSignal(list)
     StartSignal = pyqtSignal()
@@ -59,20 +58,15 @@ class MyApp(QMainWindow, Ui_MainWindow):
         self.data = None
         self.ConfigFilePath = None       
         self.DUTSerialNumber = None
-        self.setGeometry(100, 100, 1200, 800)
-        
-        #this setup found to be necessary for the a long running test to run in the background
+        self.setGeometry(200, 50, 1200, 1000)
+    
         self.obj = Tester.Tester(InstrumentConnections(pyvisa.ResourceManager()))
-        
-        self.thread = QThread()
+
         self.obj.resultReady.connect(self.onResultReady)
         self.obj.status.connect(self.TestInfoLineEdit.setText)
-        self.obj.moveToThread(self.thread)
-        self.thread.start()
-
         self.StartTestButton.pressed.connect(self.loadTester)
-        self.StopTestButton.pressed.connect(self.obj.listenForStop)
-        self.StartSignal.connect(self.obj.startTest)
+        self.StopTestButton.pressed.connect(self.obj.stopThread.start)
+        self.StartSignal.connect(self.obj.startTestThread)
         self.TestCommand.connect(self.obj.takeTestInfo)
         self.PSW80ConnectButton.pressed.connect(self.obj.myResources.Connect)
         self.RefreshButton.pressed.connect(self.obj.myResources.Refresh)
@@ -95,7 +89,7 @@ class MyApp(QMainWindow, Ui_MainWindow):
         testinginfo = self.model.getCheckedTests2()
         testinginfo.append(self.quantity_df)
         self.TestCommand.emit(testinginfo)#sends to the tester all the test info
-        self.StartSignal.emit()#self.obj.startTest()
+        self.StartSignal.emit()
         return
     
     def onResultReady(self, tup):
@@ -124,7 +118,7 @@ class MyApp(QMainWindow, Ui_MainWindow):
             self.data['PASS/FAIL'] = self.data['PASS/FAIL'].astype(str) 
             self.data['TEST #'] = self.data['TEST #'].astype(float)
             self.data['Check'] = True
-            #self.data['MIN']
+            self.data['MEASURED'] = self.data['MEASURED'].astype(float)
             self.model = PandasModel(self.data)
             self.tableView.setModel(self.model)
             self.measurement_column = self.model.getColumnNumber('MEASURED')

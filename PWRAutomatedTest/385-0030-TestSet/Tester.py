@@ -34,8 +34,9 @@ class Tester(QObject):
         self.quantity_df = None
         self.testInfo = None
         self.continueTest =True
-        #self.stopThread = Thread(target = self.listenForStop, name='stop')
-        #self.stopThread.start()
+        #the stopThread is only started when the stop button is pressed
+        self.stopThread = Thread(target = self.listenForStop, name='stop')
+
         
         self.testFunctions = {1:self.runtest1, 2:self.runtest2, 3:self.runtest3,
                               4:self.runtest4, 5:self.runtest5, 6:self.runtest6,
@@ -47,8 +48,10 @@ class Tester(QObject):
     @pyqtSlot()
     def listenForStop(self):
         self.continueTest= False
-        print('heard that stop request:'.format(self.continueTest))
+        self.status.emit('Stopping Test')
+        #print('heard that stop request:'.format(self.continueTest))
         return
+    
     def functionMapper(self, testNumber):
         return self.testFunctions.get(testNumber, self.runtest15)
     
@@ -99,7 +102,15 @@ class Tester(QObject):
             self.myResources.hv_supply.set_output_mode(0)
             
         return
+    
     @pyqtSlot()
+    def startTestThread(self):
+        self.testThread = Thread(target=self.startTest, name='test')
+        self.continueTest=True
+        self.testThread.start()
+        return
+    
+    
     def startTest(self):
         #loads 1-3 on 385-0046 Rev B are each 10 ohm. 24^2/10 = 57.6W
         #self.continueTest=True
@@ -107,8 +118,6 @@ class Tester(QObject):
         
         for test in self.testInfo:
             if self.continueTest:
-                print('In start Test: {}'.format(self.continueTest))
-                #testNumber = test['TEST #'][0].astype(int)
                 testNumber = test.iloc[0,0].astype(int)
                 self.setUpForTest(test)
                 #calling the test with the testNumber allows the 
@@ -118,14 +127,12 @@ class Tester(QObject):
                 #call the testFunction with the starting row to write to
                 #for static checks, there is only one row. 
                 testFunction(test)
-        
+            else:
+                return
         self.status.emit('Done the Test')
         self.testDone.emit()
        
 
-        
-        
-        #self.runtest15()
 
         '''
         Dishcharge the caps using the beefy MOSFET on the interface board:
