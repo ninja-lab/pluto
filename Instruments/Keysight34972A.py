@@ -50,7 +50,7 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         
     def measure_Resistance(self, channel_num, range='AUTO'):
         val = self.inst.query('MEASure:RESistance? {0}, (@{1})'.format(range, channel_num))
-        return round(float(val),1)
+        return round(float(val),2)
     
     def measure_temp(self, channel_num, probe_type='TCouple', thermocouple='K'):
         temp_str = self.inst.query('MEASure:TEMPerature? {0}, {1}, (@{2})'.format(probe_type, thermocouple,channel_num))

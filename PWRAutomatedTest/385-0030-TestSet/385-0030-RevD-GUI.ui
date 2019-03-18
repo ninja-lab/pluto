@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>906</width>
-    <height>858</height>
+    <width>1024</width>
+    <height>847</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -96,8 +96,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>886</width>
-         <height>797</height>
+         <width>1004</width>
+         <height>786</height>
         </rect>
        </property>
        <property name="styleSheet">
@@ -155,7 +155,7 @@
              </size>
             </property>
             <property name="text">
-             <string>Testing</string>
+             <string>DUT Testing</string>
             </property>
             <property name="checkable">
              <bool>true</bool>
@@ -180,7 +180,7 @@
         <item row="1" column="0">
          <widget class="QStackedWidget" name="stackedWidget">
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="TestingPage">
            <layout class="QGridLayout" name="gridLayout_4">
@@ -193,7 +193,26 @@
             </item>
             <item row="1" column="0">
              <layout class="QGridLayout" name="gridLayout_3">
-              <item row="4" column="0" colspan="4">
+              <item row="2" column="3">
+               <widget class="QPushButton" name="RunAllButton">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>150</width>
+                  <height>50</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Run All</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0" colspan="6">
                <widget class="QLineEdit" name="TestInfoLineEdit">
                 <property name="minimumSize">
                  <size>
@@ -213,7 +232,7 @@
                 </property>
                 <property name="minimumSize">
                  <size>
-                  <width>50</width>
+                  <width>150</width>
                   <height>50</height>
                  </size>
                 </property>
@@ -268,13 +287,13 @@
                 </property>
                 <property name="minimumSize">
                  <size>
-                  <width>50</width>
+                  <width>150</width>
                   <height>50</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>200</width>
+                  <width>400</width>
                   <height>100</height>
                  </size>
                 </property>
@@ -308,7 +327,7 @@
                 </property>
                </widget>
               </item>
-              <item row="2" column="3">
+              <item row="2" column="5">
                <spacer name="horizontalSpacer_4">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -321,7 +340,7 @@
                 </property>
                </spacer>
               </item>
-              <item row="0" column="3">
+              <item row="0" column="5">
                <spacer name="horizontalSpacer_3">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -350,6 +369,25 @@
                 </property>
                 <property name="text">
                  <string>Save Results</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="4">
+               <widget class="QPushButton" name="RunNoneButton">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>150</width>
+                  <height>50</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Run None</string>
                 </property>
                </widget>
               </item>
@@ -618,7 +656,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>906</width>
+     <width>1024</width>
      <height>21</height>
     </rect>
    </property>

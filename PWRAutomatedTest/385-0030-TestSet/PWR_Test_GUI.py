@@ -12,6 +12,7 @@ from datetime import datetime
 from InstrumentConnections import InstrumentConnections
 from PyQt5 import uic
 import pandas as pd
+import numpy as np
 from PandasModel import PandasModel
 #from PandasModel2 import PandasModel2
 import Tester
@@ -64,6 +65,8 @@ class MyApp(QMainWindow, Ui_MainWindow):
 
         self.obj.resultReady.connect(self.onResultReady)
         self.obj.status.connect(self.TestInfoLineEdit.setText)
+        self.RunAllButton.pressed.connect(self.RunAll)
+        self.RunNoneButton.pressed.connect(self.RunNone)
         self.StartTestButton.pressed.connect(self.loadTester)
         self.StopTestButton.pressed.connect(self.obj.stopThread.start)
         self.StartSignal.connect(self.obj.startTestThread)
@@ -112,22 +115,37 @@ class MyApp(QMainWindow, Ui_MainWindow):
         and max when it is useful, and to create the quantity objects. 
         '''
         try:
-            self.data = pd.read_excel(self.ConfigFilePath, 'Report')
+            self.data = pd.read_excel(self.ConfigFilePath, sheet_name='Report', na_values = np.nan)
             #otherwise the TIMESTAMP column is loaded as NaN which is float
             self.data['TIMESTAMP'] = pd.to_datetime(self.data['TIMESTAMP'])
             self.data['PASS/FAIL'] = self.data['PASS/FAIL'].astype(str) 
             self.data['TEST #'] = self.data['TEST #'].astype(float)
-            self.data['Check'] = True
+            self.data['Check'] = False
             self.data['MEASURED'] = self.data['MEASURED'].astype(float)
             self.model = PandasModel(self.data)
             self.tableView.setModel(self.model)
             self.measurement_column = self.model.getColumnNumber('MEASURED')
             self.time_column = self.model.getColumnNumber('TIMESTAMP') 
+            self.check_column = self.model.getColumnNumber('Check')
             self.quantity_df = pd.read_excel(self.ConfigFilePath, 'Quantities')          
             self.checkStartConditions() 
         except ValueError:
             self.ConfigFileLineEdit.setText('That is not the config file!')
-       
+    def RunAll(self):
+        '''
+        Convenience function for checking all check boxes at once. 
+        The table is loaded initially with all unchecked. 
+        '''
+        if self.data is not None:
+            for row in self.model._data.index:
+                index = self.model.index(row,self.check_column)
+                self.model.setData(index, True)
+    def RunNone(self):
+        if self.data is not None:
+            for row in self.model._data.index:
+                index = self.model.index(row,self.check_column)
+                self.model.setData(index, False)
+        
     def showTestingPage(self):
         self.stackedWidget.setCurrentIndex(0)
         self.InstrumentsPageButton.setChecked(False)

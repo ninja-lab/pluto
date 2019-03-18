@@ -6,6 +6,7 @@ Created on Thu Feb  7 07:36:13 2019
 """
 
 from PyQt5 import QtCore, QtGui
+import numpy as np
 
 class PandasModel(QtCore.QAbstractTableModel):
     """
@@ -32,7 +33,7 @@ class PandasModel(QtCore.QAbstractTableModel):
             if index.column() != 10: 
             #don't want what determines check state to be shown as a string
                 if index.isValid():              
-                    if index.column() == 3 or index.column()==4:
+                    if index.column() == 3 or index.column()==4 or index.column()==6:
                         return '{:.3f}'.format(value)    
                     if index.column() == 0:
                         return '{:.2f}'.format(value)
@@ -42,8 +43,11 @@ class PandasModel(QtCore.QAbstractTableModel):
                 return QtCore.Qt.Checked if value else QtCore.Qt.Unchecked
         elif index.column() == self.getColumnNumber('MEASURED'):
             if role == QtCore.Qt.BackgroundRole:
+                if np.isnan(value):
+                    return QtGui.QColor("red")
                 if (self.getMinimum(index.row()) > value) or (self.getMaximum(index.row()) < value):
                     return QtGui.QColor("red")
+
                 else:
                     return QtGui. QColor("green")
     

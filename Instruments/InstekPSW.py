@@ -13,12 +13,13 @@ class InstekPSW(Visa_Instrument.Visa_Instrument):
         super().__init__(resource, debug)
         self.set_averaging(2)
         
+        self.write('STATus:OPERation:ENABle 1024')
     
     def apply(self, voltage, current):
         '''
         The APPLy command is used to set both the
         voltage and current. The voltage and current will
-        be output as soon as the function is executed if the
+        NOT be output as soon as the function is executed if the
         programmed values are within the accepted range.
         An execution error will occur if the programmed
         values are not within accepted ranges.
@@ -93,8 +94,13 @@ class InstekPSW(Visa_Instrument.Visa_Instrument):
         '''
         Returns current protection status (0 or 1).
         '''
-        state = int(self.query('CURRent:PROTection:STATe?'))
-        return (True if state==1 else False)
+        #state = int(self.query('CURRent:PROTection:STATe?'))
+        #return (True if state==1 else False)
+    
+        #status = self.query('STATus:OPERation:EVENt?')
+        status = self.query('STATus:OPERation:CONDition?')
+        status = status.strip()
+        return int(status) == 1024
     
     def set_bleed_resistor(self,state):
         '''
