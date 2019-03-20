@@ -4,9 +4,9 @@ Created on Tue Feb  5 07:34:02 2019
 
 @author: Erik
 
-The two instek power supplies are Serial Intruments, and it 
-is impossible to tell them apart until one queries their *IDN?. 
-The Keysight DAQ is a USBTMC. 
+The two instek power supplies are Serial Intruments, and it
+is impossible to tell them apart until one queries their *IDN?.
+The Keysight DAQ is a USBTMC.
 
 """
 
@@ -15,7 +15,7 @@ from PyQt5.QtCore import pyqtSignal, QThread
 import InstekPSW
 import Keysight34972A
 import re
-    
+
 class InstrumentConnections(QThread):
     #this is where user defined signals need to get defined
     KeysightConnectResult = pyqtSignal(str)
@@ -23,7 +23,7 @@ class InstrumentConnections(QThread):
     PSW800ConnectResult = pyqtSignal(str)
     ConnectResult = pyqtSignal(bool)
 
-    
+
     def __init__(self, rm):
         #I think classes that define new signals need to inherit from QThread
         QThread.__init__(self)
@@ -32,28 +32,28 @@ class InstrumentConnections(QThread):
         self.lv_supply = None
         self.hv_supply = None
         self.daq = None
-        
+
         self.KeysightPattern = re.compile('Agilent Technologies,34972A')
         self.PSW80Pattern = re.compile('GW-INSTEK,PSW80-13.5')
         self.PSW800Pattern = re.compile('GW-INSTEK,PSW800-1.44')
-        
+
         return
-    
+
     def get_lv_supply(self):
         return self.lv_supply
     def get_hv_supply(self):
         return self.hv_supply
     def get_daq(self):
         return self.daq
-    
+
 
     def Connect(self):
-    
+
         tup =  self.ResourceManager.list_resources()
         #print(tup)
         for resource_id in tup :
             try:
-                
+
                 inst = self.ResourceManager.open_resource(resource_id, send_end=True )
                 name_str = inst.query('*IDN?').strip()
                 #print(name_str)
@@ -79,7 +79,7 @@ class InstrumentConnections(QThread):
             if self.daq is None:
                 self.KeysightConnectResult.emit('Could not connect!')
             self.ConnectResult.emit(False)
-            
+
     def Refresh(self):
         if self.lv_supply is not None:
             self.lv_supply.close()
@@ -96,23 +96,22 @@ class InstrumentConnections(QThread):
         self.PSW800ConnectResult.emit('Refreshed')
         self.KeysightConnectResult.emit('Refreshed')
         return
-            
-                    
-                    
-                        
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-             
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -170,7 +170,7 @@ class Tester(QObject):
     def runtest1(self, test):
         '''
         For a threshold check, the test passed in is known
-        to be a Series. 
+        to be a 1 row dataframe. 
         
         Test PSUA UVLO Rising
         '''
@@ -184,11 +184,11 @@ class Tester(QObject):
         if .99*_input < output < 1.01*_input:
             self.resultReady.emit((row, output))
             return        
-        startVoltage = test['MIN'].iloc[0] #self.getMinimum(row)
+        startVoltage = test['MIN'].iloc[0]-.3 #self.getMinimum(row)
         stopVoltage = test['MAX'].iloc[0]#self.getMaximum(row)
         for i in np.arange(startVoltage, stopVoltage, .01): #sweep voltage range
             self.myResources.lv_supply.apply(i, 1) #(voltage, current)
-            time.sleep(.1)
+            time.sleep(.1) 
             output = self.quantities['24Vout'].measure(self.myResources.daq)
             _input = self.quantities['PSUA'].measure(self.myResources.daq)
             if .99*_input < output < 1.01*_input:
@@ -203,29 +203,27 @@ class Tester(QObject):
     def runtest2(self, test):
         '''
         For a threshold check, the test passed in is known
-        to be a Series. 
+        to be a 1 row dataframe. 
         
         Test PSUA UVLO Falling
         '''
         self.status.emit('Running Test 2')
         row = self.getRow(test)
-        self.myResources.lv_supply.apply(10,1)
-        self.myResources.lv_supply.set_output('ON')
-        #first check at 10V to see if there is a shorted inner diode
-        output = self.quantities['24Vout'].measure(self.myResources.daq)
-        _input = self.quantities['PSUA'].measure(self.myResources.daq)
-        if .99*_input < output < 1.01*_input:
-            self.resultReady.emit((row, output))
-            return        
+
         stopVoltage = test['MIN'].iloc[0] 
         startVoltage = test['MAX'].iloc[0]
+        self.myResources.lv_supply.apply(startVoltage+.3, 1)
+        self.myResources.lv_supply.set_output('ON')
+        time.sleep(.5)
         for i in np.arange(startVoltage+.3, stopVoltage, -.01): #sweep voltage range
             self.myResources.lv_supply.apply(i, 1) #(voltage, current)
             time.sleep(.1)
             output = self.quantities['24Vout'].measure(self.myResources.daq)
             _input = self.quantities['PSUA'].measure(self.myResources.daq)
-            if .99*_input < output < 1.01*_input:
-                self.resultReady.emit((row, output))
+            if  not (.99*_input < output < 1.01*_input): #checks if PMOS is OFF
+                #self.updateModel(row, _input)
+                self.resultReady.emit((row, _input)) #read the input after PMOS is OFF
+                self.myResources.lv_supply.set_output('OFF')
                 return
         self.myResources.lv_supply.set_output('OFF')
         self.resultReady.emit((row, np.nan))

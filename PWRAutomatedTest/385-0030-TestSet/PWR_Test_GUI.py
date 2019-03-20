@@ -16,7 +16,7 @@ import numpy as np
 from PandasModel import PandasModel
 #from PandasModel2 import PandasModel2
 import Tester
-import style_strings
+#import style_strings
 import PWRTestResources_rc
 qtCreatorFile = "385-0030-RevD-GUI.ui"
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
