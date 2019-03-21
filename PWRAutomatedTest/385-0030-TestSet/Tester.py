@@ -95,6 +95,8 @@ class Tester(QObject):
             if 'PSUA' in test['TEST DESCRIPTION'].iloc[0]:
                 close_rl5(self.myResources.daq)
             elif 'PSUB' in test['TEST DESCRIPTION'].iloc[0]:
+                #self.myResources.lv_supply.apply(0,0.2) #discharge PSUA caps (still work in progress), trying to prevent issue where PSUA and PSUB LEDs ON at same time
+                #time.sleep(1)
                 open_rl5(self.myResources.daq)
                 self.myResources.hv_supply.apply(0,0)
                 self.myResources.lv_supply.apply(0,0)
@@ -137,7 +139,7 @@ class Tester(QObject):
 
 
         '''
-        Dishcharge the caps using the beefy MOSFET on the interface board:
+        Discharge the caps using the beefy MOSFET on the interface board:
         '''
         self.status.emit('Discharging Caps')
         discharge_caps(2.3, self.quantities['HVCAP'], self.quantities['BuckCurrent'],
@@ -174,7 +176,7 @@ class Tester(QObject):
         
         Test PSUA UVLO Rising
         '''
-        self.status.emit('Running Test 1')
+        self.status.emit('Running Test 1: PSUA UVLO Rising')
         row = self.getRow(test)
         self.myResources.lv_supply.apply(10,1)
         self.myResources.lv_supply.set_output('ON')
@@ -183,9 +185,13 @@ class Tester(QObject):
         _input = self.quantities['PSUA'].measure(self.myResources.daq)
         if .99*_input < output < 1.01*_input:
             self.resultReady.emit((row, output))
+            self.status.emit('Failed Test 1: Shorted Inner Diode-PMOS')
+            self.myResources.lv_supply.set_output('OFF') 
+            time.sleep(1)
             return        
         startVoltage = test['MIN'].iloc[0]-.3 #self.getMinimum(row)
         stopVoltage = test['MAX'].iloc[0]#self.getMaximum(row)
+        self.status.emit('Running Test 1: Voltage Ramp')
         for i in np.arange(startVoltage, stopVoltage, .01): #sweep voltage range
             self.myResources.lv_supply.apply(i, 1) #(voltage, current)
             time.sleep(.1) 
@@ -194,12 +200,16 @@ class Tester(QObject):
             if .99*_input < output < 1.01*_input:
                 #self.updateModel(row, _input)
                 self.resultReady.emit((row, output))
-                return
+                self.myResources.lv_supply.set_output('OFF') #added to turn off PS after test has completed
+                self.status.emit('Test 1: PSUA UVLO Rising - PASS')                
+                return 
         self.myResources.lv_supply.set_output('OFF')
-        
+        self.status.emit('Failed Test 1: PSUA UVLO Rising - FAIL')
         self.resultReady.emit((row, np.nan))
         return
-        
+        #in the future, will need to make a way to read flags
+        #to see if test 2 is enable to stop need from turning off PS for safety.
+        #This would help with reducing Test Time
     def runtest2(self, test):
         '''
         For a threshold check, the test passed in is known
@@ -207,14 +217,16 @@ class Tester(QObject):
         
         Test PSUA UVLO Falling
         '''
-        self.status.emit('Running Test 2')
+        self.status.emit('Running Test 2: PSUA UVLO Falling')
         row = self.getRow(test)
 
         stopVoltage = test['MIN'].iloc[0] 
         startVoltage = test['MAX'].iloc[0]
         self.myResources.lv_supply.apply(startVoltage+.3, 1)
         self.myResources.lv_supply.set_output('ON')
-        time.sleep(.5)
+
+        time.sleep(5)
+        self.status.emit('Running Test 2: Voltage Ramp')
         for i in np.arange(startVoltage+.3, stopVoltage, -.01): #sweep voltage range
             self.myResources.lv_supply.apply(i, 1) #(voltage, current)
             time.sleep(.1)
@@ -224,25 +236,239 @@ class Tester(QObject):
                 #self.updateModel(row, _input)
                 self.resultReady.emit((row, _input)) #read the input after PMOS is OFF
                 self.myResources.lv_supply.set_output('OFF')
+                self.status.emit('Test 2: PSUA UVLO Falling - PASS')
                 return
         self.myResources.lv_supply.set_output('OFF')
+        self.status.emit('Failed Test 2: PSUA UVLO Falling - FAIL')
         self.resultReady.emit((row, np.nan))
         return
 
     def runtest3(self, test):
-      
+        '''
+        For a threshold check, the test passed in is known
+        to be a 1 row dataframe.  
+        
+        Test PSUA OVLO Rising
+        '''
+        self.status.emit('Running Test 3: PSUA OVLO Rising')
+        row = self.getRow(test)
+        self.myResources.lv_supply.apply(10,1)
+        self.myResources.lv_supply.set_output('ON')
+        
+        #first check at 10V to see if there is a shorted inner diode (sanity check)
+        output = self.quantities['24Vout'].measure(self.myResources.daq)
+        _input = self.quantities['PSUA'].measure(self.myResources.daq)
+        if .99*_input < output < 1.01*_input:
+            self.resultReady.emit((row, output))
+            self.status.emit('Failed Test 3: Shorted Inner Diode-PMOS')
+            self.myResources.lv_supply.set_output('OFF') 
+            time.sleep(1)
+            return
+
+        startVoltage = test['MIN'].iloc[0]-.3 #self.getMinimum(row)
+        stopVoltage = test['MAX'].iloc[0]#self.getMaximum(row)
+
+        self.myResources.lv_supply.apply(startVoltage, 1) #boot up to allow PMOS to be ON
+        self.myResources.lv_supply.set_output('ON')
+
+        time.sleep(5)
+        self.status.emit('Running Test 3: Voltage Ramp')
+        for i in np.arange(startVoltage, stopVoltage, .01): #sweep voltage range
+            self.myResources.lv_supply.apply(i, 1) #(voltage, current)
+            time.sleep(.1) 
+            output = self.quantities['24Vout'].measure(self.myResources.daq)
+            _input = self.quantities['PSUA'].measure(self.myResources.daq)
+            if not(.99*_input < output < 1.01*_input): #we want to see PMOS turn off
+                #self.updateModel(row, _input)
+                self.resultReady.emit((row, _input))
+                self.myResources.lv_supply.set_output('OFF') 
+                self.status.emit('Test 3: PSUA OVLO Rising - PASS')
+                return 
+        self.myResources.lv_supply.set_output('OFF')
+        self.status.emit('Failed Test 3: PSUA OVLO Rising - FAIL')
+        self.resultReady.emit((row, np.nan))
+        
         return
             
     def runtest4(self, test):
+        '''
+        For a threshold check, the test passed in is known
+        to be a 1 row dataframe. 
+        
+        Test PSUA OVLO Falling
+        '''
+        self.status.emit('Running Test 4: PSUA OVLO Falling')
+        row = self.getRow(test)
+
+        stopVoltage = test['MIN'].iloc[0] 
+        startVoltage = test['MAX'].iloc[0]
+        self.myResources.lv_supply.apply(startVoltage+.3, 1)
+        self.myResources.lv_supply.set_output('ON')
+
+        time.sleep(5)
+        self.status.emit('Running Test 4: Voltage Ramp down')
+        for i in np.arange(startVoltage+.3, stopVoltage, -.01): #sweep voltage range
+            self.myResources.lv_supply.apply(i, 1) #(voltage, current)
+            time.sleep(.1)
+            output = self.quantities['24Vout'].measure(self.myResources.daq)
+            _input = self.quantities['PSUA'].measure(self.myResources.daq)
+            if  .99*_input < output < 1.01*_input: #checks if PMOS is ON
+                #self.updateModel(row, _input)
+                self.resultReady.emit((row, output)) 
+                self.myResources.lv_supply.set_output('OFF')
+                self.status.emit('Test 4: PSUA OVLO Falling - PASS')
+                return
+        self.myResources.lv_supply.set_output('OFF')
+        self.status.emit('Failed Test 4: PSUA OVLO Falling - FAIL')
+        self.resultReady.emit((row, np.nan))
         return
     def runtest5(self, test):
+        '''
+        For a threshold check, the test passed in is known
+        to be a 1 row dataframe. 
+        
+        Test PSUB UVLO Rising
+        '''
+        self.status.emit('Running Test 5: PSUB UVLO Rising')
+        row = self.getRow(test)
+        self.myResources.lv_supply.apply(10,1)
+        self.myResources.lv_supply.set_output('ON')
+        #first check at 10V to see if there is a shorted inner diode
+        output = self.quantities['24Vout'].measure(self.myResources.daq)
+        _input = self.quantities['PSUB'].measure(self.myResources.daq)
+        if .99*_input < output < 1.01*_input:
+            self.resultReady.emit((row, output))
+            self.status.emit('Failed Test 5: Shorted Inner Diode-PMOS')
+            self.myResources.lv_supply.set_output('OFF') 
+            time.sleep(1)
+            return        
+        startVoltage = test['MIN'].iloc[0]-.3 #self.getMinimum(row)
+        stopVoltage = test['MAX'].iloc[0]#self.getMaximum(row)
+        self.status.emit('Running Test 5: Voltage Ramp')
+        for i in np.arange(startVoltage, stopVoltage, .01): #sweep voltage range
+            self.myResources.lv_supply.apply(i, 1) #(voltage, current)
+            time.sleep(.1) 
+            output = self.quantities['24Vout'].measure(self.myResources.daq)
+            _input = self.quantities['PSUB'].measure(self.myResources.daq)
+            if .99*_input < output < 1.01*_input:
+                #self.updateModel(row, _input)
+                self.resultReady.emit((row, output))
+                self.myResources.lv_supply.set_output('OFF') #added to turn off PS after test has completed
+                self.status.emit('Test 5: PSUB UVLO Rising - PASS')
+                return 
+        self.myResources.lv_supply.set_output('OFF')
+        self.status.emit('Failed Test 5: PSUB UVLO Rising - FAIL')
+        self.resultReady.emit((row, np.nan))
         return
     def runtest6(self, test):
+        '''
+        For a threshold check, the test passed in is known
+        to be a 1 row dataframe. 
+        
+        Test PSUB UVLO Falling
+        '''
+        self.status.emit('Running Test 6: PSUB UVLO Falling')
+        row = self.getRow(test)
+
+        stopVoltage = test['MIN'].iloc[0] 
+        startVoltage = test['MAX'].iloc[0]
+        self.myResources.lv_supply.apply(startVoltage+.3, 1)
+        self.myResources.lv_supply.set_output('ON')
+
+        time.sleep(5)
+        self.status.emit('Running Test 6: Voltage Ramp')
+        for i in np.arange(startVoltage+.3, stopVoltage, -.01): #sweep voltage range
+            self.myResources.lv_supply.apply(i, 1) #(voltage, current)
+            time.sleep(.1)
+            output = self.quantities['24Vout'].measure(self.myResources.daq)
+            _input = self.quantities['PSUB'].measure(self.myResources.daq)
+            if  not (.99*_input < output < 1.01*_input): #checks if PMOS is OFF
+                #self.updateModel(row, _input)
+                self.resultReady.emit((row, _input)) #read the input after PMOS is OFF
+                self.myResources.lv_supply.set_output('OFF')
+                self.status.emit('Test 6: PSUB UVLO Falling - PASS')
+                return
+        self.myResources.lv_supply.set_output('OFF')
+        self.status.emit('Failed Test 6: PSUB UVLO Falling - FAIL')
+        self.resultReady.emit((row, np.nan))
         return
     def runtest7(self, test):
+        '''
+        For a threshold check, the test passed in is known
+        to be a 1 row dataframe.  
+        
+        Test PSUB OVLO Rising
+        '''
+        self.status.emit('Running Test 7: PSUB OVLO Rising')
+        row = self.getRow(test)
+        self.myResources.lv_supply.apply(10,1)
+        self.myResources.lv_supply.set_output('ON')
+        
+        #first check at 10V to see if there is a shorted inner diode (sanity check)
+        output = self.quantities['24Vout'].measure(self.myResources.daq)
+        _input = self.quantities['PSUB'].measure(self.myResources.daq)
+        if .99*_input < output < 1.01*_input:
+            self.resultReady.emit((row, output))
+            self.status.emit('Failed Test 7: Shorted Inner Diode-PMOS')
+            self.myResources.lv_supply.set_output('OFF') 
+            time.sleep(1)
+            return
+
+        startVoltage = test['MIN'].iloc[0]-.3 #self.getMinimum(row)
+        stopVoltage = test['MAX'].iloc[0]#self.getMaximum(row)
+
+        self.myResources.lv_supply.apply(startVoltage, 1) #boot up to allow PMOS to be ON
+        self.myResources.lv_supply.set_output('ON')
+
+        time.sleep(5)
+        self.status.emit('Running Test 7: Voltage Ramp')
+        for i in np.arange(startVoltage, stopVoltage, .01): #sweep voltage range
+            self.myResources.lv_supply.apply(i, 1) #(voltage, current)
+            time.sleep(.1) 
+            output = self.quantities['24Vout'].measure(self.myResources.daq)
+            _input = self.quantities['PSUB'].measure(self.myResources.daq)
+            if not(.99*_input < output < 1.01*_input): #we want to see PMOS turn off
+                #self.updateModel(row, _input)
+                self.resultReady.emit((row, _input))
+                self.myResources.lv_supply.set_output('OFF') 
+                self.status.emit('Test 7: PSUA OVLO Rising - PASS')
+                return 
+        self.myResources.lv_supply.set_output('OFF')
+        self.status.emit('Failed Test 7: PSUA OVLO Rising - FAIL')
+        self.resultReady.emit((row, np.nan))
         return
      
     def runtest8(self,test):
+        '''
+        For a threshold check, the test passed in is known
+        to be a 1 row dataframe. 
+        
+        Test PSUB OVLO Falling
+        '''
+        self.status.emit('Running Test 8: PSUB OVLO Falling')
+        row = self.getRow(test)
+
+        stopVoltage = test['MIN'].iloc[0] 
+        startVoltage = test['MAX'].iloc[0]
+        self.myResources.lv_supply.apply(startVoltage+.3, 1)
+        self.myResources.lv_supply.set_output('ON')
+
+        time.sleep(5)
+        self.status.emit('Running Test 8: Voltage Ramp down')
+        for i in np.arange(startVoltage+.3, stopVoltage, -.01): #sweep voltage range
+            self.myResources.lv_supply.apply(i, 1) #(voltage, current)
+            time.sleep(.1)
+            output = self.quantities['24Vout'].measure(self.myResources.daq)
+            _input = self.quantities['PSUB'].measure(self.myResources.daq)
+            if  .99*_input < output < 1.01*_input: #checks if PMOS is ON
+                #self.updateModel(row, _input)
+                self.resultReady.emit((row, output)) 
+                self.myResources.lv_supply.set_output('OFF')
+                self.status.emit('Test 8: PSUB OVLO Falling - PASS')
+                return
+        self.myResources.lv_supply.set_output('OFF')
+        self.status.emit('Failed Test 8: PSUB OVLO Falling - FAIL')
+        self.resultReady.emit((row, np.nan))
         return
     def runtest9(self, test):
         '''Impose 840 V on DC bus and read back current draw
