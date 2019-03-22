@@ -135,8 +135,9 @@ class Tester(QObject):
                 return
         self.status.emit('Done the Test')
         self.testDone.emit()
-       
-
+        #IM 3/21/19 - Setting HV/LV supplies down to 0V as a safety precaution
+        self.myResources.hv_supply.apply(0,0)
+        self.myResources.lv_supply.apply(0,0)
 
         '''
         Discharge the caps using the beefy MOSFET on the interface board:
@@ -484,7 +485,8 @@ class Tester(QObject):
             self.status.emit('Test 9: Voltage still climbing')
             if self.myResources.hv_supply.get_current_protection_state():
                 self.myResources.hv_supply.set_output('OFF')
-                self.status.emit('Current Limit!')
+                self.status.emit('Failed Test 9: Current Limit!')
+                time.sleep(3)
                 break
             time.sleep(.3)
         current = self.myResources.hv_supply.get_current()
@@ -508,14 +510,15 @@ class Tester(QObject):
             self.status.emit('Test 10: Voltage still climbing')
             if self.myResources.hv_supply.get_current_protection_state():
                 self.myResources.hv_supply.set_output('OFF')
-                self.status.emit('Current Limit!')
+                self.status.emit('Failed Test 10: Current Limit!')
+                time.sleep(3)
                 break
             time.sleep(.3)
         current = self.myResources.hv_supply.get_current()
         self.resultReady.emit((row, current))
         self.myResources.hv_supply.set_output('OFF')
         while self.myResources.hv_supply.get_voltage() > 5:
-            self.status.emit('Test 9: Voltage still falling')
+            self.status.emit('Test 10: Voltage still falling')
             time.sleep(.3)
         return
 
@@ -533,7 +536,8 @@ class Tester(QObject):
             self.status.emit('Test 11: Voltage still climbing')
             if self.myResources.hv_supply.get_current_protection_state():
                 self.myResources.hv_supply.set_output('OFF')
-                self.status.emit('Current Limit!')
+                self.status.emit('Failed Test 11: Current Limit!')
+                time.sleep(3)
                 break
             time.sleep(.3)
         current = self.myResources.hv_supply.get_current()
@@ -557,7 +561,8 @@ class Tester(QObject):
             self.status.emit('Test 12: Voltage still climbing')
             if self.myResources.hv_supply.get_current_protection_state():
                 self.myResources.hv_supply.set_output('OFF')
-                self.status.emit('Current Limit!')
+                self.status.emit('Failed Test 12: Current Limit!')
+                time.sleep(3)
                 break
             time.sleep(.3)
         current = self.myResources.hv_supply.get_current()
@@ -631,7 +636,7 @@ class Tester(QObject):
         data = self.myResources.daq.read()
         combined = zip(np.arange(start_row, end_row+1), data)
         for pair in combined:
-            self.resultReady.emit(pair)
+            self.resultReady.emit(pair) 
         self.status.emit('Test 15 Complete')
             
         return
