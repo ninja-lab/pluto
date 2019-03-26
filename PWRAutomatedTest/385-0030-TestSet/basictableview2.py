@@ -28,11 +28,11 @@ class Example(QWidget):
         self.initUI()
         
     def initData(self):
-        data = pd.DataFrame(np.random.randint(1,10, size=(6,4)), columns=['TEST #','MIN', 'MAX','MEASURED'])
+        data = pd.DataFrame(np.random.randint(1,10, size=(12,4)), columns=['TEST #','MIN', 'MAX','MEASURED'])
         data['MEASURED'][2] = np.nan
-        data['TEST #'] = [1,2,3,4.1,4.2,4.3]   
-        data['MIN'] = [1, 2, 3, 4, 5, 6]
-        data['MAX'] = [5,4, 4, 9, 9, 9]                
+        data['TEST #'] = [1,2,3,4.1,4.2,4.3,5.1,5.2,5.3,6.1,6.2,6.3]   
+        data['MIN'] = list(range(len(data['TEST #']))) #[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        data['MAX'] = list(range(len(data['TEST #'])))#[5,4, 4, 9, 9, 9 ,17, 18, 19, 20, 21, 22]                
         #add the checkable column to the DataFrame
         data['Check'] = True
         self.model = PandasModel2(data)

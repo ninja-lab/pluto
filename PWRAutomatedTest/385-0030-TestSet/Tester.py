@@ -42,7 +42,9 @@ class Tester(QObject):
                               4:self.runtest4, 5:self.runtest5, 6:self.runtest6,
                               7:self.runtest7, 8:self.runtest8, 9:self.runtest9,
                               10:self.runtest10, 11:self.runtest11, 12:self.runtest12,
-                              13:self.runtest13, 14:self.runtest14}
+                              13:self.runtest13, 14:self.runtest14, 15:self.runtest15,
+                              16:self.runtest16, 17:self.runtest17, 18:self.runtest18,
+                              19:self.runtest19, 20:self.runtest20, 21:self.runtest21}
         return
     
     @pyqtSlot()
@@ -53,7 +55,7 @@ class Tester(QObject):
         return
     
     def functionMapper(self, testNumber):
-        return self.testFunctions.get(testNumber, self.runtest15)
+        return self.testFunctions.get(testNumber, self.runtestError)
     
     @pyqtSlot(list)
     def takeTestInfo(self, alist):
@@ -170,6 +172,14 @@ class Tester(QObject):
         return self.data.columns.get_loc(string)
     def getRow(self, test):
         return test['TEST #'].iloc[0].astype(int)-1
+    def runtestError(self, test):
+        '''
+        Catch all failure test
+        '''
+        self.status.emit('Invalid Tests selected')
+        time.sleep(3) 
+        
+        return  
     def runtest1(self, test):
         '''
         For a threshold check, the test passed in is known
@@ -617,8 +627,18 @@ class Tester(QObject):
             self.status.emit('Test 14: Voltage still falling')
             time.sleep(.3)  
 
-        return
-                        
+        return     
+    
+    #def runtestStateMachine(self, test):
+        #'''
+        #Runs tests 15-21 when called upon functionMapper. Allows you to run through these tests all in one sequence rather than 
+        #running each individually
+        #'''
+        #self.runtest15(test)
+        #self.runtest19(test)
+        
+        #return  
+                 
     def runtest15(self, test):
         '''
         Read all channels to verify no power state.
@@ -631,8 +651,12 @@ class Tester(QObject):
         time.sleep(1)
         quantity_list = list(self.quantities.values())
         self.myResources.daq.setQuantityScan(quantity_list)
-        start_row = 14
-        end_row = 27
+        #start_row = 14
+        #start_row = test['TEST #'].iloc[0].index
+        #end_row = 27
+        #end_row = test['TEST #'].iloc[-1]
+        start_row=test.index[0]
+        end_row=test.index[-1]
         data = self.myResources.daq.read()
         combined = zip(np.arange(start_row, end_row+1), data)
         for pair in combined:
@@ -642,7 +666,7 @@ class Tester(QObject):
         return
     
    
-    def runtest16(self):
+    def runtest16(self, test):
         '''
         Test the HV Cap charging time. Scan list is:
             24Vout - the Flyback Vin
@@ -656,6 +680,7 @@ class Tester(QObject):
         row 30 - HVCap
         row 31 - TP2B
         '''
+        row=test.index[0]
         #row = 29
         running_values = np.arange(0,20,1, dtype=float)
         flyback_on(self.myResources.daq)
@@ -670,16 +695,16 @@ class Tester(QObject):
         
         while True:
             data = self.myResources.daq.read()
-            TP2B = data[2]
-            Vin = data[0]
+            TP2B = self.quantities['TP2B'].measure(self.myResources.daq)#data[2]
+            Vin = self.quantities['24Vout'].measure(self.myResources.daq)#data[0]
             #some time saving checks:
-            if Vin < self.getMinimum(29):
+            if Vin < self.getMinimum(row):#29):
                 self.status.emit('Flyback Vin is out of spec!')
-                self.resultReady.emit((29, Vin))
+                self.resultReady.emit((row, Vin))#29, Vin))
                 break
-            if TP2B < self.getMinimum(31):
+            if TP2B < self.getMinimum(row+2):#31):
                 self.status.emit('HV Buck Bootstrap out of spec!')
-                self.resultReady.emit((31, TP2B))
+                self.resultReady.emit((row+2, TP2B))#31, TP2B))
                 break
             if (datetime.now() - start).seconds > 170:
                 self.status.emit('Timeout condition on cap charging')
@@ -692,9 +717,9 @@ class Tester(QObject):
                 self.status.emit('HV Cap has settled')
                 stop = datetime.now()
                 time.sleep(2)
-                self.resultReady.emit((29, Vin))
-                self.resultReady.emit((30, data[1]/(stop-start).seconds))
-                self.resultReady.emit((31, TP2B))
+                self.resultReady.emit((row, Vin))#29, Vin))
+                self.resultReady.emit((row+1, data[1]/(stop-start).seconds))#30, data[1]/(stop-start).seconds))
+                self.resultReady.emit((row+2, TP2B))#31, TP2B))
                 break
             else:
                 self.status.emit('HV Cap still charging: {:.1f}V'.format(data[1]))
@@ -702,7 +727,7 @@ class Tester(QObject):
         self.status.emit('Test 16 Complete')
         time.sleep(1)
         return
-    def runtest17(self):
+    def runtest17(self, test):
         '''
         A single scan to check the normal operation state. 
         Rows 32-45 inclusive. 
@@ -719,8 +744,10 @@ class Tester(QObject):
         self.myResources.hv_supply.set_output('ON')
         quantity_list = list(self.quantities.values())
         self.myResources.daq.setQuantityScan(quantity_list)
-        start_row = 32
-        end_row = 45
+        #start_row = 32
+        #end_row = 45
+        start_row=test.index[0]
+        end_row=test.index[-1]
         data = self.myResources.daq.read()
         combined = zip(np.arange(start_row, end_row+1), data)
         for pair in combined:
@@ -729,7 +756,7 @@ class Tester(QObject):
         time.sleep(1)
         return
     
-    def runtest18(self):
+    def runtest18(self, test):
         '''
         Test SPM mode from Normal Operation State. 
         PSUA goes off, and the DUT transitions to SPM state. 
@@ -740,8 +767,10 @@ class Tester(QObject):
         The buck is still allowed to be ON. 
         All 3 loads are still ON. 
         '''
-        start_row = 46
-        end_row = 60
+        #start_row = 46
+        #end_row = 60
+        start_row=test.index[0]
+        end_row=test.index[-1]
         self.status.emit('Test 18: SPM Mode Starting')
         self.myResources.lv_supply.set_output('OFF')
         time.sleep(5)
@@ -762,7 +791,7 @@ class Tester(QObject):
         self.myResources.hv_supply.set_output('OFF')
         return
     
-    def runtest19(self):
+    def runtest19(self, test):#):
         '''
         Another NoPowerState check
         '''
@@ -773,15 +802,17 @@ class Tester(QObject):
         time.sleep(1)
         quantity_list = list(self.quantities.values())
         self.myResources.daq.setQuantityScan(quantity_list)
-        start_row = 61
-        end_row = 74
+        #start_row = 60
+        #end_row = 73
+        start_row=test.index[0]
+        end_row=test.index[-1]
         data = self.myResources.daq.read()
         combined = zip(np.arange(start_row, end_row+1), data)
         for pair in combined:
             self.resultReady.emit(pair)
         self.status.emit('Test 19 Complete')
         return
-    def runtest20(self):
+    def runtest20(self, test):
         '''
         Test the bootstrap function of the HV Buck. 
         row 75: HVCAP dV/dt
@@ -833,7 +864,7 @@ class Tester(QObject):
                 time.sleep(.3)
         return
     
-    def runtest21(self):
+    def runtest21(self, test):
         '''
         Test SPM mode from Bootstrap state. 
         PSUA is already OFF, and the DUT is in SPM mode already. 
@@ -844,8 +875,10 @@ class Tester(QObject):
         The buck is still allowed to be ON. 
         All 3 loads are still ON. 
         '''
-        start_row = 80
-        end_row = 93
+        #start_row = 80
+        #end_row = 93
+        start_row=test.index[0]
+        end_row=test.index[-1]
         self.status.emit('Test 21: SPM Mode from Bootstrap state')
         #self.myResources.lv_supply.set_output('OFF')
         #time.sleep(5)
