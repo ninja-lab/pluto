@@ -42,7 +42,9 @@ class Tester(QObject):
                               4:self.runtest4, 5:self.runtest5, 6:self.runtest6,
                               7:self.runtest7, 8:self.runtest8, 9:self.runtest9,
                               10:self.runtest10, 11:self.runtest11, 12:self.runtest12,
-                              13:self.runtest13, 14:self.runtest14}
+                              13:self.runtest13, 14:self.runtest14, 15:self.runtest15,
+                              16:self.runtest16, 17:self.runtest17, 18:self.runtest18,
+                              19:self.runtest19, 20:self.runtest20, 21:self.runtest21}
         return
     
     @pyqtSlot()
@@ -53,7 +55,7 @@ class Tester(QObject):
         return
     
     def functionMapper(self, testNumber):
-        return self.testFunctions.get(testNumber, self.runtest15)
+        return self.testFunctions.get(testNumber, self.runtestError)
     
     @pyqtSlot(list)
     def takeTestInfo(self, alist):
@@ -95,13 +97,16 @@ class Tester(QObject):
             if 'PSUA' in test['TEST DESCRIPTION'].iloc[0]:
                 close_rl5(self.myResources.daq)
             elif 'PSUB' in test['TEST DESCRIPTION'].iloc[0]:
-                open_rl5(self.myResources.daq)
+                #self.myResources.lv_supply.apply(0,0.2) #discharge PSUA caps (still work in progress), trying to prevent issue where PSUA and PSUB LEDs ON at same time
                 self.myResources.hv_supply.apply(0,0)
-                self.myResources.lv_supply.apply(0,0)
-        else:
-            self.myResources.hv_supply.apply(0,0)
-            self.myResources.hv_supply.set_output_mode(0)
-            
+                self.myResources.lv_supply.apply(0,0)                
+                open_rl5(self.myResources.daq)
+        elif 'Caps Charging' in test['TEST DESCRIPTION'].iloc[0]: 
+            load1_off(self.myResources.daq)
+            load2_off(self.myResources.daq)
+            load3_off(self.myResources.daq)
+            close_rl5(self.myResources.daq)
+           
         return
     
     @pyqtSlot()
@@ -133,18 +138,16 @@ class Tester(QObject):
                 return
         self.status.emit('Done the Test')
         self.testDone.emit()
-       
-
+        #IM 3/21/19 - Setting HV/LV supplies down to 0V as a safety precaution
+        self.myResources.hv_supply.apply(0,0)
+        self.myResources.hv_supply.set_output_mode(0)
+        self.myResources.lv_supply.apply(0,0)
 
         '''
-        Dishcharge the caps using the beefy MOSFET on the interface board:
+        Discharge the caps using the beefy MOSFET on the interface board:
         '''
         self.status.emit('Discharging Caps')
-        discharge_caps(2.3, self.quantities['HVCAP'], self.quantities['BuckCurrent'],
-                       self.myResources.daq)
-        cap_voltage = self.quantities['HVCAP'].measure(self.myResources.daq)
-        self.status.emit('Cap Voltage: {:.2f}V'.format(cap_voltage))
-        time.sleep(3)
+        self.dischargeCaps()
         self.status.emit('Done all the tests!')
         return
 
@@ -152,12 +155,25 @@ class Tester(QObject):
     For the threshold tests, it is useful to know the min and max acceptable values,
     because the test can be slow if sweeping a large range and stepping small. 
     Unfortunately, the data exists in two places, but is only read from for convienence 
-    here. 
+    here.  NOTE: IM 3/26/2019 data dataframe produces error, found better method test[test['NAME']== thing ['MIN'].iloc[0]
     '''
-    def getMinimum(self, row):
-        return self.data.iloc[row, self.getColumnNumber('MIN')]
-    def getMaximum(self, row):
-        return self.data.iloc[row, self.getColumnNumber('MAX')]
+    #def getMinimum(self, row):
+        #return self.data.iloc[row, self.getColumnNumber('MIN')]
+    #def getMaximum(self, row):
+        #return self.data.iloc[row, self.getColumnNumber('MAX')]
+    
+    def dischargeCaps(self): #IM 3/26/19 - Adding fail state power down event
+        self.continueTest= False # for fail state powerdown events
+        self.myResources.hv_supply.apply(0,0)
+        self.myResources.lv_supply.apply(0,0)
+        self.status.emit('Discharging Caps')
+        discharge_caps(2.3, self.quantities['HVCAP'], self.quantities['BuckCurrent'],
+                       self.myResources.daq)
+        cap_voltage = self.quantities['HVCAP'].measure(self.myResources.daq)
+        self.status.emit('Cap Voltage: {:.2f}V'.format(cap_voltage))
+        time.sleep(3)
+        return
+    
     def getColumnNumber(self, string):
         '''
         Given a string that identifies a label/column, 
@@ -167,14 +183,22 @@ class Tester(QObject):
         return self.data.columns.get_loc(string)
     def getRow(self, test):
         return test['TEST #'].iloc[0].astype(int)-1
+    def runtestError(self, test):
+        '''
+        Catch all failure test
+        '''
+        self.status.emit('Invalid Tests selected')
+        time.sleep(3) 
+        
+        return  
     def runtest1(self, test):
         '''
         For a threshold check, the test passed in is known
-        to be a Series. 
+        to be a 1 row dataframe. 
         
         Test PSUA UVLO Rising
         '''
-        self.status.emit('Running Test 1')
+        self.status.emit('Running Test 1: PSUA UVLO Rising')
         row = self.getRow(test)
         self.myResources.lv_supply.apply(10,1)
         self.myResources.lv_supply.set_output('ON')
@@ -183,68 +207,293 @@ class Tester(QObject):
         _input = self.quantities['PSUA'].measure(self.myResources.daq)
         if .99*_input < output < 1.01*_input:
             self.resultReady.emit((row, output))
+            self.status.emit('Failed Test 1: Shorted Inner Diode-PMOS')
+            self.myResources.lv_supply.set_output('OFF') 
+            time.sleep(1)
             return        
-        startVoltage = test['MIN'].iloc[0] #self.getMinimum(row)
+        startVoltage = test['MIN'].iloc[0]-.3 #self.getMinimum(row)
         stopVoltage = test['MAX'].iloc[0]#self.getMaximum(row)
+        self.status.emit('Running Test 1: Voltage Ramp')
         for i in np.arange(startVoltage, stopVoltage, .01): #sweep voltage range
             self.myResources.lv_supply.apply(i, 1) #(voltage, current)
-            time.sleep(.1)
+            time.sleep(.1) 
             output = self.quantities['24Vout'].measure(self.myResources.daq)
             _input = self.quantities['PSUA'].measure(self.myResources.daq)
             if .99*_input < output < 1.01*_input:
                 #self.updateModel(row, _input)
                 self.resultReady.emit((row, output))
-                return
+                self.myResources.lv_supply.set_output('OFF') #added to turn off PS after test has completed
+                self.status.emit('Test 1: PSUA UVLO Rising - PASS')                
+                return 
         self.myResources.lv_supply.set_output('OFF')
-        
+        self.status.emit('Failed Test 1: PSUA UVLO Rising - FAIL')
         self.resultReady.emit((row, np.nan))
         return
-        
+        #in the future, will need to make a way to read flags
+        #to see if test 2 is enable to stop need from turning off PS for safety.
+        #This would help with reducing Test Time
     def runtest2(self, test):
         '''
         For a threshold check, the test passed in is known
-        to be a Series. 
+        to be a 1 row dataframe. 
         
         Test PSUA UVLO Falling
         '''
-        self.status.emit('Running Test 2')
+        self.status.emit('Running Test 2: PSUA UVLO Falling')
         row = self.getRow(test)
-        self.myResources.lv_supply.apply(10,1)
-        self.myResources.lv_supply.set_output('ON')
-        #first check at 10V to see if there is a shorted inner diode
-        output = self.quantities['24Vout'].measure(self.myResources.daq)
-        _input = self.quantities['PSUA'].measure(self.myResources.daq)
-        if .99*_input < output < 1.01*_input:
-            self.resultReady.emit((row, output))
-            return        
+
         stopVoltage = test['MIN'].iloc[0] 
         startVoltage = test['MAX'].iloc[0]
+        self.myResources.lv_supply.apply(startVoltage+.3, 1)
+        self.myResources.lv_supply.set_output('ON')
+
+        time.sleep(5)
+        self.status.emit('Running Test 2: Voltage Ramp')
         for i in np.arange(startVoltage+.3, stopVoltage, -.01): #sweep voltage range
             self.myResources.lv_supply.apply(i, 1) #(voltage, current)
             time.sleep(.1)
             output = self.quantities['24Vout'].measure(self.myResources.daq)
             _input = self.quantities['PSUA'].measure(self.myResources.daq)
-            if .99*_input < output < 1.01*_input:
-                self.resultReady.emit((row, output))
+            if  not (.99*_input < output < 1.01*_input): #checks if PMOS is OFF
+                #self.updateModel(row, _input)
+                self.resultReady.emit((row, _input)) #read the input after PMOS is OFF
+                self.myResources.lv_supply.set_output('OFF')
+                self.status.emit('Test 2: PSUA UVLO Falling - PASS')
                 return
         self.myResources.lv_supply.set_output('OFF')
+        self.status.emit('Failed Test 2: PSUA UVLO Falling - FAIL')
         self.resultReady.emit((row, np.nan))
         return
 
     def runtest3(self, test):
-      
+        '''
+        For a threshold check, the test passed in is known
+        to be a 1 row dataframe.  
+        
+        Test PSUA OVLO Rising
+        '''
+        self.status.emit('Running Test 3: PSUA OVLO Rising')
+        row = self.getRow(test)
+        self.myResources.lv_supply.apply(10,1)
+        self.myResources.lv_supply.set_output('ON')
+        
+        #first check at 10V to see if there is a shorted inner diode (sanity check)
+        output = self.quantities['24Vout'].measure(self.myResources.daq)
+        _input = self.quantities['PSUA'].measure(self.myResources.daq)
+        if .99*_input < output < 1.01*_input:
+            self.resultReady.emit((row, output))
+            self.status.emit('Failed Test 3: Shorted Inner Diode-PMOS')
+            self.myResources.lv_supply.set_output('OFF') 
+            time.sleep(1)
+            return
+
+        startVoltage = test['MIN'].iloc[0]-.3 #self.getMinimum(row)
+        stopVoltage = test['MAX'].iloc[0]#self.getMaximum(row)
+
+        self.myResources.lv_supply.apply(startVoltage, 1) #boot up to allow PMOS to be ON
+        self.myResources.lv_supply.set_output('ON')
+
+        time.sleep(5)
+        self.status.emit('Running Test 3: Voltage Ramp')
+        for i in np.arange(startVoltage, stopVoltage, .01): #sweep voltage range
+            self.myResources.lv_supply.apply(i, 1) #(voltage, current)
+            time.sleep(.1) 
+            output = self.quantities['24Vout'].measure(self.myResources.daq)
+            _input = self.quantities['PSUA'].measure(self.myResources.daq)
+            if not(.99*_input < output < 1.01*_input): #we want to see PMOS turn off
+                #self.updateModel(row, _input)
+                self.resultReady.emit((row, _input))
+                self.myResources.lv_supply.set_output('OFF') 
+                self.status.emit('Test 3: PSUA OVLO Rising - PASS')
+                return 
+        self.myResources.lv_supply.set_output('OFF')
+        self.status.emit('Failed Test 3: PSUA OVLO Rising - FAIL')
+        self.resultReady.emit((row, np.nan))
+        
         return
             
     def runtest4(self, test):
+        '''
+        For a threshold check, the test passed in is known
+        to be a 1 row dataframe. 
+        
+        Test PSUA OVLO Falling
+        '''
+        self.status.emit('Running Test 4: PSUA OVLO Falling')
+        row = self.getRow(test)
+
+        stopVoltage = test['MIN'].iloc[0] 
+        startVoltage = test['MAX'].iloc[0]
+        self.myResources.lv_supply.apply(startVoltage+.3, 1)
+        self.myResources.lv_supply.set_output('ON')
+
+        time.sleep(5)
+        self.status.emit('Running Test 4: Voltage Ramp down')
+        for i in np.arange(startVoltage+.3, stopVoltage, -.01): #sweep voltage range
+            self.myResources.lv_supply.apply(i, 1) #(voltage, current)
+            time.sleep(.1)
+            output = self.quantities['24Vout'].measure(self.myResources.daq)
+            _input = self.quantities['PSUA'].measure(self.myResources.daq)
+            if  .99*_input < output < 1.01*_input: #checks if PMOS is ON
+                #self.updateModel(row, _input)
+                self.resultReady.emit((row, output)) 
+                self.myResources.lv_supply.set_output('OFF')
+                self.status.emit('Test 4: PSUA OVLO Falling - PASS')
+                
+                time.sleep(1)
+                return
+        self.myResources.lv_supply.set_output('OFF')
+        self.status.emit('Failed Test 4: PSUA OVLO Falling - FAIL')
+        self.resultReady.emit((row, np.nan))
+        
         return
     def runtest5(self, test):
+        '''
+        For a threshold check, the test passed in is known
+        to be a 1 row dataframe. 
+        
+        Test PSUB UVLO Rising
+        '''
+        self.status.emit('Running Test 5: PSUB UVLO Rising')
+        row = self.getRow(test)
+        self.myResources.lv_supply.apply(10,1)
+        self.myResources.lv_supply.set_output('ON')
+        #first check at 10V to see if there is a shorted inner diode
+        output = self.quantities['24Vout'].measure(self.myResources.daq)
+        _input = self.quantities['PSUB'].measure(self.myResources.daq)
+        if .99*_input < output < 1.01*_input:
+            self.resultReady.emit((row, output))
+            self.status.emit('Failed Test 5: Shorted Inner Diode-PMOS')
+            self.myResources.lv_supply.set_output('OFF') 
+            time.sleep(1)
+            return        
+        startVoltage = test['MIN'].iloc[0]-.3 #self.getMinimum(row)
+        stopVoltage = test['MAX'].iloc[0]#self.getMaximum(row)
+        self.status.emit('Running Test 5: Voltage Ramp')
+        for i in np.arange(startVoltage, stopVoltage, .01): #sweep voltage range
+            self.myResources.lv_supply.apply(i, 1) #(voltage, current)
+            time.sleep(.1) 
+            output = self.quantities['24Vout'].measure(self.myResources.daq)
+            _input = self.quantities['PSUB'].measure(self.myResources.daq)
+            if .99*_input < output < 1.01*_input:
+                #self.updateModel(row, _input)
+                self.resultReady.emit((row, output))
+                self.myResources.lv_supply.set_output('OFF') #added to turn off PS after test has completed
+                self.status.emit('Test 5: PSUB UVLO Rising - PASS')
+                return 
+        self.myResources.lv_supply.set_output('OFF')
+        self.status.emit('Failed Test 5: PSUB UVLO Rising - FAIL')
+        self.resultReady.emit((row, np.nan))
         return
     def runtest6(self, test):
+        '''
+        For a threshold check, the test passed in is known
+        to be a 1 row dataframe. 
+        
+        Test PSUB UVLO Falling
+        '''
+        self.status.emit('Running Test 6: PSUB UVLO Falling')
+        row = self.getRow(test)
+
+        stopVoltage = test['MIN'].iloc[0] 
+        startVoltage = test['MAX'].iloc[0]
+        self.myResources.lv_supply.apply(startVoltage+.3, 1)
+        self.myResources.lv_supply.set_output('ON')
+
+        time.sleep(5)
+        self.status.emit('Running Test 6: Voltage Ramp')
+        for i in np.arange(startVoltage+.3, stopVoltage, -.01): #sweep voltage range
+            self.myResources.lv_supply.apply(i, 1) #(voltage, current)
+            time.sleep(.1)
+            output = self.quantities['24Vout'].measure(self.myResources.daq)
+            _input = self.quantities['PSUB'].measure(self.myResources.daq)
+            if  not (.99*_input < output < 1.01*_input): #checks if PMOS is OFF
+                #self.updateModel(row, _input)
+                self.resultReady.emit((row, _input)) #read the input after PMOS is OFF
+                self.myResources.lv_supply.set_output('OFF')
+                self.status.emit('Test 6: PSUB UVLO Falling - PASS')
+                return
+        self.myResources.lv_supply.set_output('OFF')
+        self.status.emit('Failed Test 6: PSUB UVLO Falling - FAIL')
+        self.resultReady.emit((row, np.nan))
         return
     def runtest7(self, test):
+        '''
+        For a threshold check, the test passed in is known
+        to be a 1 row dataframe.  
+        
+        Test PSUB OVLO Rising
+        '''
+        self.status.emit('Running Test 7: PSUB OVLO Rising')
+        row = self.getRow(test)
+        self.myResources.lv_supply.apply(10,1)
+        self.myResources.lv_supply.set_output('ON')
+        
+        #first check at 10V to see if there is a shorted inner diode (sanity check)
+        output = self.quantities['24Vout'].measure(self.myResources.daq)
+        _input = self.quantities['PSUB'].measure(self.myResources.daq)
+        if .99*_input < output < 1.01*_input:
+            self.resultReady.emit((row, output))
+            self.status.emit('Failed Test 7: Shorted Inner Diode-PMOS')
+            self.myResources.lv_supply.set_output('OFF') 
+            time.sleep(1)
+            return
+
+        startVoltage = test['MIN'].iloc[0]-.3 #self.getMinimum(row)
+        stopVoltage = test['MAX'].iloc[0]#self.getMaximum(row)
+
+        self.myResources.lv_supply.apply(startVoltage, 1) #boot up to allow PMOS to be ON
+        self.myResources.lv_supply.set_output('ON')
+
+        time.sleep(5)
+        self.status.emit('Running Test 7: Voltage Ramp')
+        for i in np.arange(startVoltage, stopVoltage, .01): #sweep voltage range
+            self.myResources.lv_supply.apply(i, 1) #(voltage, current)
+            time.sleep(.1) 
+            output = self.quantities['24Vout'].measure(self.myResources.daq)
+            _input = self.quantities['PSUB'].measure(self.myResources.daq)
+            if not(.99*_input < output < 1.01*_input): #we want to see PMOS turn off
+                #self.updateModel(row, _input)
+                self.resultReady.emit((row, _input))
+                self.myResources.lv_supply.set_output('OFF') 
+                self.status.emit('Test 7: PSUA OVLO Rising - PASS')
+                return 
+        self.myResources.lv_supply.set_output('OFF')
+        self.status.emit('Failed Test 7: PSUA OVLO Rising - FAIL')
+        self.resultReady.emit((row, np.nan))
         return
      
     def runtest8(self,test):
+        '''
+        For a threshold check, the test passed in is known
+        to be a 1 row dataframe. 
+        
+        Test PSUB OVLO Falling
+        '''
+        self.status.emit('Running Test 8: PSUB OVLO Falling')
+        row = self.getRow(test)
+
+        stopVoltage = test['MIN'].iloc[0] 
+        startVoltage = test['MAX'].iloc[0]
+        self.myResources.lv_supply.apply(startVoltage+.3, 1)
+        self.myResources.lv_supply.set_output('ON')
+
+        time.sleep(5)
+        self.status.emit('Running Test 8: Voltage Ramp down')
+        for i in np.arange(startVoltage+.3, stopVoltage, -.01): #sweep voltage range
+            self.myResources.lv_supply.apply(i, 1) #(voltage, current)
+            time.sleep(.1)
+            output = self.quantities['24Vout'].measure(self.myResources.daq)
+            _input = self.quantities['PSUB'].measure(self.myResources.daq)
+            if  .99*_input < output < 1.01*_input: #checks if PMOS is ON
+                #self.updateModel(row, _input)
+                self.resultReady.emit((row, output)) 
+                self.myResources.lv_supply.set_output('OFF')
+                self.status.emit('Test 8: PSUB OVLO Falling - PASS')
+                return
+        self.myResources.lv_supply.set_output('OFF')
+        self.status.emit('Failed Test 8: PSUB OVLO Falling - FAIL')
+        self.resultReady.emit((row, np.nan))
         return
     def runtest9(self, test):
         '''Impose 840 V on DC bus and read back current draw
@@ -260,7 +509,8 @@ class Tester(QObject):
             self.status.emit('Test 9: Voltage still climbing')
             if self.myResources.hv_supply.get_current_protection_state():
                 self.myResources.hv_supply.set_output('OFF')
-                self.status.emit('Current Limit!')
+                self.status.emit('Failed Test 9: Current Limit!')
+                time.sleep(3)
                 break
             time.sleep(.3)
         current = self.myResources.hv_supply.get_current()
@@ -284,14 +534,15 @@ class Tester(QObject):
             self.status.emit('Test 10: Voltage still climbing')
             if self.myResources.hv_supply.get_current_protection_state():
                 self.myResources.hv_supply.set_output('OFF')
-                self.status.emit('Current Limit!')
+                self.status.emit('Failed Test 10: Current Limit!')
+                time.sleep(3)
                 break
             time.sleep(.3)
         current = self.myResources.hv_supply.get_current()
         self.resultReady.emit((row, current))
         self.myResources.hv_supply.set_output('OFF')
         while self.myResources.hv_supply.get_voltage() > 5:
-            self.status.emit('Test 9: Voltage still falling')
+            self.status.emit('Test 10: Voltage still falling')
             time.sleep(.3)
         return
 
@@ -309,7 +560,8 @@ class Tester(QObject):
             self.status.emit('Test 11: Voltage still climbing')
             if self.myResources.hv_supply.get_current_protection_state():
                 self.myResources.hv_supply.set_output('OFF')
-                self.status.emit('Current Limit!')
+                self.status.emit('Failed Test 11: Current Limit!')
+                time.sleep(3)
                 break
             time.sleep(.3)
         current = self.myResources.hv_supply.get_current()
@@ -333,7 +585,8 @@ class Tester(QObject):
             self.status.emit('Test 12: Voltage still climbing')
             if self.myResources.hv_supply.get_current_protection_state():
                 self.myResources.hv_supply.set_output('OFF')
-                self.status.emit('Current Limit!')
+                self.status.emit('Failed Test 12: Current Limit!')
+                time.sleep(3)
                 break
             time.sleep(.3)
         current = self.myResources.hv_supply.get_current()
@@ -388,8 +641,18 @@ class Tester(QObject):
             self.status.emit('Test 14: Voltage still falling')
             time.sleep(.3)  
 
-        return
-                        
+        return     
+    
+    #def runtestStateMachine(self, test):
+        #'''
+        #Runs tests 15-21 when called upon functionMapper. Allows you to run through these tests all in one sequence rather than 
+        #running each individually
+        #'''
+        #self.runtest15(test)
+        #self.runtest19(test)
+        
+        #return  
+                 
     def runtest15(self, test):
         '''
         Read all channels to verify no power state.
@@ -402,18 +665,21 @@ class Tester(QObject):
         time.sleep(1)
         quantity_list = list(self.quantities.values())
         self.myResources.daq.setQuantityScan(quantity_list)
-        start_row = 14
-        end_row = 27
+        #start_row = 14
+        #start_row = test['TEST #'].iloc[0].index
+        #end_row = 27
+        #end_row = test['TEST #'].iloc[-1]
+        start_row=test.index[0]
+        end_row=test.index[-1]
         data = self.myResources.daq.read()
         combined = zip(np.arange(start_row, end_row+1), data)
         for pair in combined:
-            self.resultReady.emit(pair)
+            self.resultReady.emit(pair) 
         self.status.emit('Test 15 Complete')
-            
         return
     
    
-    def runtest16(self):
+    def runtest16(self, test):
         '''
         Test the HV Cap charging time. Scan list is:
             24Vout - the Flyback Vin
@@ -421,12 +687,13 @@ class Tester(QObject):
             TP2B   - Isolated 24V that powers buck circuitry
         Passing criteria for HVCap looks at dV/dt = 2V/sec
         Test 17 checks final charge level, not this test. 
-        Load1 is ON still. 
+        Load1 removed #Load1 is ON still. 
         For now, I happen to know that 
         row 29 - 24Vout
         row 30 - HVCap
         row 31 - TP2B
         '''
+        row = test.index[0]
         #row = 29
         running_values = np.arange(0,20,1, dtype=float)
         flyback_on(self.myResources.daq)
@@ -438,42 +705,59 @@ class Tester(QObject):
         
         start = datetime.now()
         self.myResources.lv_supply.set_output('ON')
-        
+        time.sleep(3)
         while True:
             data = self.myResources.daq.read()
+            #TP2B = self.quantities['TP2B'].measure(self.myResources.daq)
             TP2B = data[2]
+            #Vin = self.quantities['24Vout'].measure(self.myResources.daq)
             Vin = data[0]
             #some time saving checks:
-            if Vin < self.getMinimum(29):
-                self.status.emit('Flyback Vin is out of spec!')
-                self.resultReady.emit((29, Vin))
+            if Vin < test[test['NAME']=='24Vout']['MIN'].iloc[0]:
+            #if Vin < self.getMinimum(29):
+                self.status.emit('FAIL Test 16: Flyback Vin is out of spec!')
+                self.resultReady.emit((row, Vin))
+                #self.resultReady.emit((29, Vin))
+                time.sleep(2)
+                self.continueTest= False
+                self.dischargeCaps #if fails, discharges caps
                 break
-            if TP2B < self.getMinimum(31):
-                self.status.emit('HV Buck Bootstrap out of spec!')
-                self.resultReady.emit((31, TP2B))
+            if TP2B < test[test['NAME']=='TP2B']['MIN'].iloc[0]:
+            #if TP2B < self.getMinimum(31):
+                self.status.emit('FAIL Test 16: HV Buck Bootstrap out of spec!')
+                self.resultReady.emit((row+2, TP2B))
+                #self.resultReady.emit((31, TP2B))
+                time.sleep(2)
+                self.continueTest= False
+                self.dischargeCaps #if fails, discharges caps
                 break
-            if (datetime.now() - start).seconds > 170:
-                self.status.emit('Timeout condition on cap charging')
+            if (datetime.now() - start).seconds > 250:#170:
+                self.status.emit('FAIL Test 16: Timeout condition on cap charging')
+                time.sleep(2)
+                self.continueTest= False
+                self.dischargeCaps #if fails, discharges caps
                 break
             #update the running values of HV Cap voltages
             running_values[:-1] = running_values[1:]
             running_values[-1] = data[1]
             settled = (np.diff(running_values) < .5).all()
             if settled:
-                self.status.emit('HV Cap has settled')
+                self.status.emit('Test 16: HV Cap has settled')
+                self.resultReady.emit((row, Vin))
+                #self.resultReady.emit((29, Vin))
                 stop = datetime.now()
-                time.sleep(2)
-                self.resultReady.emit((29, Vin))
-                self.resultReady.emit((30, data[1]/(stop-start).seconds))
-                self.resultReady.emit((31, TP2B))
+                self.resultReady.emit((row+1, data[1]/(stop-start).seconds))
+                #self.resultReady.emit((30, data[1]/(stop-start).seconds))
+                self.resultReady.emit((row+2, TP2B))
+                #self.resultReady.emit((31, TP2B))
                 break
             else:
-                self.status.emit('HV Cap still charging: {:.1f}V'.format(data[1]))
+                self.status.emit('Running Test 16: HV Cap still charging: {:.1f}V'.format(data[1]))
                 time.sleep(2)
         self.status.emit('Test 16 Complete')
         time.sleep(1)
         return
-    def runtest17(self):
+    def runtest17(self, test):
         '''
         A single scan to check the normal operation state. 
         Rows 32-45 inclusive. 
@@ -483,15 +767,18 @@ class Tester(QObject):
         it should be off in normal operation state. 
         '''
         self.status.emit('Test 17 Commencing')
+        load1_on(self.myResources.daq)
         load2_on(self.myResources.daq)
         load3_on(self.myResources.daq)
-        buck_on(self.myResources.daq)
+        buck_on(self.myResources.daq) #sets up buck for SPM mode
         self.myResources.hv_supply.apply(800, 1)
         self.myResources.hv_supply.set_output('ON')
         quantity_list = list(self.quantities.values())
         self.myResources.daq.setQuantityScan(quantity_list)
-        start_row = 32
-        end_row = 45
+        #start_row = 32
+        #end_row = 45
+        start_row=test.index[0]
+        end_row=test.index[-1]
         data = self.myResources.daq.read()
         combined = zip(np.arange(start_row, end_row+1), data)
         for pair in combined:
@@ -500,7 +787,7 @@ class Tester(QObject):
         time.sleep(1)
         return
     
-    def runtest18(self):
+    def runtest18(self, test):
         '''
         Test SPM mode from Normal Operation State. 
         PSUA goes off, and the DUT transitions to SPM state. 
@@ -511,10 +798,12 @@ class Tester(QObject):
         The buck is still allowed to be ON. 
         All 3 loads are still ON. 
         '''
-        start_row = 46
-        end_row = 60
+        #start_row = 46
+        #end_row = 60
+        start_row=test.index[0]
+        end_row=test.index[-1]
         self.status.emit('Test 18: SPM Mode Starting')
-        self.myResources.lv_supply.set_output('OFF')
+        self.myResources.lv_supply.set_output('OFF') #turns off low voltage
         time.sleep(5)
         data = self.myResources.daq.read()
         #calculate buck efficiency:
@@ -533,7 +822,7 @@ class Tester(QObject):
         self.myResources.hv_supply.set_output('OFF')
         return
     
-    def runtest19(self):
+    def runtest19(self, test):#):
         '''
         Another NoPowerState check
         '''
@@ -544,15 +833,17 @@ class Tester(QObject):
         time.sleep(1)
         quantity_list = list(self.quantities.values())
         self.myResources.daq.setQuantityScan(quantity_list)
-        start_row = 61
-        end_row = 74
+        #start_row = 60
+        #end_row = 73
+        start_row=test.index[0]
+        end_row=test.index[-1]
         data = self.myResources.daq.read()
         combined = zip(np.arange(start_row, end_row+1), data)
         for pair in combined:
             self.resultReady.emit(pair)
         self.status.emit('Test 19 Complete')
         return
-    def runtest20(self):
+    def runtest20(self, test):
         '''
         Test the bootstrap function of the HV Buck. 
         row 75: HVCAP dV/dt
@@ -562,6 +853,11 @@ class Tester(QObject):
         row 78: TP6B, 16V
         row 79: TP2B, Bootstrap
         '''
+        load2_off(self.myResources.daq)
+        load3_off(self.myResources.daq)
+        row=test.index[0]
+        
+        running_values = np.arange(0,20,1, dtype=float)
         self.myResources.hv_supply.apply(290, 1.44)
         alist = [self.quantities['HVCAP'], self.quantities['TP5B'],
                  self.quantities['TP1B'], self.quantities['TP6B'],
@@ -575,23 +871,29 @@ class Tester(QObject):
             TP6B = data[3]
             
             #some time saving checks:
-            if self.getMaximum(78) < TP6B < self.getMinimum(78):
-                self.status.emit('16V rail is out of spec!')
-                self.resultReady.emit((78, TP6B))
+            if test[test['NAME']=='TP6B']['MAX'].iloc[0] < TP6B < test[test['NAME']=='TP6B']['MIN'].iloc[0]:
+            #if self.getMaximum(78) < TP6B < self.getMinimum(78):
+                self.status.emit('FAIL Test 20: 16V rail is out of spec!')
+                self.resultReady.emit((row+3, TP6B))
+                #self.resultReady.emit((78, TP6B))
                 break
-            if TP2B < self.getMinimum(79):
-                self.status.emit('HV Buck Bootstrap out of spec!')
-                self.resultReady.emit((79, TP2B))
+            if TP2B < test[test['NAME']=='TP2B']['MIN'].iloc[0]:
+            #if TP2B < self.getMinimum(79):
+                self.status.emit('FAIL Test 20: HV Buck Bootstrap out of spec!')
+                self.resultReady.emit((row+4, TP2B))
+                #self.resultReady.emit((79, TP2B))
+                
                 break
             if (datetime.now() - start).seconds > 20:
-                self.status.emit('Timeout condition on cap charging')
+                self.status.emit('FAIL Test 20: Timeout condition on cap charging')
+                time.sleep(2)
                 break
             #update the running values of Buck output voltages
             running_values[:-1] = running_values[1:]
             running_values[-1] = data[1]
             settled = (np.diff(running_values) < .5).all()
             if settled:
-                self.status.emit('Buck has charged the caps')
+                self.status.emit('Test 20: Buck has charged the caps')
                 stop = datetime.now()
                 self.resultReady.emit((75, data[0]/(stop-start).seconds))
                 self.resultReady.emit((76, data[1]/(stop-start).seconds))
@@ -600,11 +902,11 @@ class Tester(QObject):
                 self.resultReady.emit((79, TP2B))
                 break
             else:
-                self.status.emit('HV Cap still charging: {:.1f}V'.format(data[0]))
+                self.status.emit('Running Test 20: HV Cap still charging: {:.1f}V'.format(data[0]))
                 time.sleep(.3)
         return
     
-    def runtest21(self):
+    def runtest21(self, test):
         '''
         Test SPM mode from Bootstrap state. 
         PSUA is already OFF, and the DUT is in SPM mode already. 
@@ -615,8 +917,13 @@ class Tester(QObject):
         The buck is still allowed to be ON. 
         All 3 loads are still ON. 
         '''
-        start_row = 80
-        end_row = 93
+        #start_row = 80
+        #end_row = 93
+        load1_on(self.myResources.daq)
+        load2_on(self.myResources.daq)
+        load3_on(self.myResources.daq)
+        start_row=test.index[0]
+        end_row=test.index[-1]
         self.status.emit('Test 21: SPM Mode from Bootstrap state')
         #self.myResources.lv_supply.set_output('OFF')
         #time.sleep(5)

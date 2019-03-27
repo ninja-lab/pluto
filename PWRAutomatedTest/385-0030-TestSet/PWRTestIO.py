@@ -6,6 +6,7 @@ Created on Wed Oct  3 14:15:10 2018
 """
 import time
 #from scipy.optimize import curve_fit
+#NOTE: daq.digital_source1 is Keysight34907A(channel, open/closed)
 import numpy as np
 
 def open_rl1(daq):

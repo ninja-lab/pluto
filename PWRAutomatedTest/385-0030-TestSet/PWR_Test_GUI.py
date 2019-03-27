@@ -4,6 +4,7 @@ Created on Tue Feb  5 10:11:55 2019
 
 @author: Erik
 """
+import os
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, qApp#, QLabel, QAction
 from PyQt5.QtCore import pyqtSignal, QThread, QObject
@@ -16,8 +17,9 @@ import numpy as np
 from PandasModel import PandasModel
 #from PandasModel2 import PandasModel2
 import Tester
-import style_strings
+#import style_strings
 import PWRTestResources_rc
+
 qtCreatorFile = "385-0030-RevD-GUI.ui"
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
 pd.set_option('precision', 1)
@@ -57,7 +59,7 @@ class MyApp(QMainWindow, Ui_MainWindow):
         self.validDUTSerialNumber = False
         self.StartTestButton.setEnabled(False)
         self.data = None
-        self.ConfigFilePath = None       
+        self.ConfigFilePath = os.path.realpath(os.path.join(os.getcwd(), 'PWR_Board_TestReportTemplate2.xlsx')) #uploads current directory along with test template into the config file path    
         self.DUTSerialNumber = None
         self.setGeometry(200, 50, 1200, 1000)
     
@@ -77,6 +79,9 @@ class MyApp(QMainWindow, Ui_MainWindow):
         self.obj.myResources.PSW800ConnectResult.connect(self.PSW800LineEdit.setText)
         self.obj.myResources.KeysightConnectResult.connect(self.KeysightLineEdit.setText)
         self.obj.myResources.ConnectResult.connect(self.takeConnectResult)
+
+        self.ConfigFileLineEdit.setText(self.ConfigFilePath) #uploading file
+        self.ConfigFileLineEdit.editingFinished.emit()
     '''    
     def setFunkyStyleSheet(self):
         qApp.setStyleSheet(style_strings.funky)
