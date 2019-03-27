@@ -720,7 +720,7 @@ class Tester(QObject):
                 #self.resultReady.emit((29, Vin))
                 time.sleep(2)
                 self.continueTest= False
-                self.dischargeCaps #if fails, discharges caps
+                self.dischargeCaps() #if fails, discharges caps
                 break
             if TP2B < test[test['NAME']=='TP2B']['MIN'].iloc[0]:
             #if TP2B < self.getMinimum(31):
@@ -729,13 +729,13 @@ class Tester(QObject):
                 #self.resultReady.emit((31, TP2B))
                 time.sleep(2)
                 self.continueTest= False
-                self.dischargeCaps #if fails, discharges caps
+                self.dischargeCaps() #if fails, discharges caps
                 break
             if (datetime.now() - start).seconds > 250:#170:
                 self.status.emit('FAIL Test 16: Timeout condition on cap charging')
                 time.sleep(2)
                 self.continueTest= False
-                self.dischargeCaps #if fails, discharges caps
+                self.dischargeCaps() #if fails, discharges caps
                 break
             #update the running values of HV Cap voltages
             running_values[:-1] = running_values[1:]
@@ -875,6 +875,9 @@ class Tester(QObject):
             #if self.getMaximum(78) < TP6B < self.getMinimum(78):
                 self.status.emit('FAIL Test 20: 16V rail is out of spec!')
                 self.resultReady.emit((row+3, TP6B))
+                time.sleep(2)
+                self.continueTest= False
+                self.dischargeCaps()#if fails, discharges caps
                 #self.resultReady.emit((78, TP6B))
                 break
             if TP2B < test[test['NAME']=='TP2B']['MIN'].iloc[0]:
@@ -882,11 +885,15 @@ class Tester(QObject):
                 self.status.emit('FAIL Test 20: HV Buck Bootstrap out of spec!')
                 self.resultReady.emit((row+4, TP2B))
                 #self.resultReady.emit((79, TP2B))
-                
+                time.sleep(2)
+                self.continueTest= False
+                self.dischargeCaps()#if fails, discharges caps
                 break
             if (datetime.now() - start).seconds > 20:
                 self.status.emit('FAIL Test 20: Timeout condition on cap charging')
                 time.sleep(2)
+                self.continueTest= False
+                self.dischargeCaps()#if fails, discharges caps
                 break
             #update the running values of Buck output voltages
             running_values[:-1] = running_values[1:]
