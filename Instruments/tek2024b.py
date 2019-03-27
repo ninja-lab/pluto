@@ -55,18 +55,9 @@ class tek2024b(Visa_Instrument.Visa_Instrument):
 
     available_averageSettings = [128, 64, 16, 4]
 
-    def __init__(self, rm, debug=False):
-        
-        for resource_id in rm.list_resources():
-            try:
-                super().__init__(resource_id, rm, debug)
-                if self.query('*IDN?').strip() == 'TEKTRONIX,TPS 2024B,0,CF:91.1CT FV:v11.07':
-                    print("Connected to: " + self.name.rstrip('\n'))
-                    self.inst.timeout = 10000
-                    break
-            except pyvisa.errors.VisaIOError:
-                print(resource_id + " is not Tektronix TPS204B, continuing...\n")
-            
+    def __init__(self, resource, debug=False):
+        super().__init__(resource, debug)
+        self.inst.timeout = 5000
 
     def status(self):
         '''
