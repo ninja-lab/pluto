@@ -82,11 +82,16 @@ class Tester(QObject):
         
         if 'inputDiode' in test['NAME'].iloc[0]:
             self.status.emit('Setting up for HV Diode tests')
+            close_rl5(self.myResources.daq)#need to enable PSUA so not to turn on SPM mode
             self.myResources.hv_supply.set_rising_voltage_slew(100) #50V/sec
             self.myResources.hv_supply.set_output_mode(2) #slew rate priority (ramp slowly)
             self.myResources.hv_supply.apply(840, 100e-3)
-            self.myResources.lv_supply.apply(0,0)
+            self.myResources.lv_supply.apply(24.0, 1)#turn on PSUA
             buck_off(self.myResources.daq)
+            load1_off(self.myResources.daq)
+            load2_off(self.myResources.daq)
+            load3_off(self.myResources.daq)
+            flyback_off(self.myResources.daq)
         elif 'Threshold' in test['NAME'].iloc[0]:
             self.status.emit('Setting up for threshold checks')
             load1_off(self.myResources.daq)
@@ -209,7 +214,9 @@ class Tester(QObject):
             self.resultReady.emit((row, output))
             self.status.emit('Failed Test 1: Shorted Inner Diode-PMOS')
             self.myResources.lv_supply.set_output('OFF') 
-            time.sleep(1)
+            time.sleep(2)
+            self.continueTest= False
+            self.dischargeCaps() #if fails, discharges caps
             return        
         startVoltage = test['MIN'].iloc[0]-.3 #self.getMinimum(row)
         stopVoltage = test['MAX'].iloc[0]#self.getMaximum(row)
@@ -228,6 +235,9 @@ class Tester(QObject):
         self.myResources.lv_supply.set_output('OFF')
         self.status.emit('Failed Test 1: PSUA UVLO Rising - FAIL')
         self.resultReady.emit((row, np.nan))
+        time.sleep(2)
+        self.continueTest= False
+        self.dischargeCaps() #if fails, discharges caps
         return
         #in the future, will need to make a way to read flags
         #to see if test 2 is enable to stop need from turning off PS for safety.
@@ -263,6 +273,9 @@ class Tester(QObject):
         self.myResources.lv_supply.set_output('OFF')
         self.status.emit('Failed Test 2: PSUA UVLO Falling - FAIL')
         self.resultReady.emit((row, np.nan))
+        time.sleep(2)
+        self.continueTest= False
+        self.dischargeCaps() #if fails, discharges caps
         return
 
     def runtest3(self, test):
@@ -284,7 +297,9 @@ class Tester(QObject):
             self.resultReady.emit((row, output))
             self.status.emit('Failed Test 3: Shorted Inner Diode-PMOS')
             self.myResources.lv_supply.set_output('OFF') 
-            time.sleep(1)
+            time.sleep(2)
+            self.continueTest= False
+            self.dischargeCaps() #if fails, discharges caps
             return
 
         startVoltage = test['MIN'].iloc[0]-.3 #self.getMinimum(row)
@@ -309,7 +324,9 @@ class Tester(QObject):
         self.myResources.lv_supply.set_output('OFF')
         self.status.emit('Failed Test 3: PSUA OVLO Rising - FAIL')
         self.resultReady.emit((row, np.nan))
-        
+        time.sleep(2)
+        self.continueTest= False
+        self.dischargeCaps() #if fails, discharges caps
         return
             
     def runtest4(self, test):
@@ -345,7 +362,9 @@ class Tester(QObject):
         self.myResources.lv_supply.set_output('OFF')
         self.status.emit('Failed Test 4: PSUA OVLO Falling - FAIL')
         self.resultReady.emit((row, np.nan))
-        
+        time.sleep(2)
+        self.continueTest= False
+        self.dischargeCaps() #if fails, discharges caps
         return
     def runtest5(self, test):
         '''
@@ -365,6 +384,9 @@ class Tester(QObject):
             self.resultReady.emit((row, output))
             self.status.emit('Failed Test 5: Shorted Inner Diode-PMOS')
             self.myResources.lv_supply.set_output('OFF') 
+            time.sleep(2)
+            self.continueTest= False
+            self.dischargeCaps() #if fails, discharges caps
             time.sleep(1)
             return        
         startVoltage = test['MIN'].iloc[0]-.3 #self.getMinimum(row)
@@ -384,6 +406,9 @@ class Tester(QObject):
         self.myResources.lv_supply.set_output('OFF')
         self.status.emit('Failed Test 5: PSUB UVLO Rising - FAIL')
         self.resultReady.emit((row, np.nan))
+        time.sleep(2)
+        self.continueTest= False
+        self.dischargeCaps() #if fails, discharges caps
         return
     def runtest6(self, test):
         '''
@@ -416,6 +441,9 @@ class Tester(QObject):
         self.myResources.lv_supply.set_output('OFF')
         self.status.emit('Failed Test 6: PSUB UVLO Falling - FAIL')
         self.resultReady.emit((row, np.nan))
+        time.sleep(2)
+        self.continueTest= False
+        self.dischargeCaps() #if fails, discharges caps
         return
     def runtest7(self, test):
         '''
@@ -436,7 +464,9 @@ class Tester(QObject):
             self.resultReady.emit((row, output))
             self.status.emit('Failed Test 7: Shorted Inner Diode-PMOS')
             self.myResources.lv_supply.set_output('OFF') 
-            time.sleep(1)
+            time.sleep(2)
+            self.continueTest= False
+            self.dischargeCaps() #if fails, discharges caps
             return
 
         startVoltage = test['MIN'].iloc[0]-.3 #self.getMinimum(row)
@@ -461,6 +491,9 @@ class Tester(QObject):
         self.myResources.lv_supply.set_output('OFF')
         self.status.emit('Failed Test 7: PSUA OVLO Rising - FAIL')
         self.resultReady.emit((row, np.nan))
+        time.sleep(2)
+        self.continueTest= False
+        self.dischargeCaps() #if fails, discharges caps
         return
      
     def runtest8(self,test):
@@ -494,6 +527,9 @@ class Tester(QObject):
         self.myResources.lv_supply.set_output('OFF')
         self.status.emit('Failed Test 8: PSUB OVLO Falling - FAIL')
         self.resultReady.emit((row, np.nan))
+        time.sleep(2)
+        self.continueTest= False
+        self.dischargeCaps() #if fails, discharges caps
         return
     def runtest9(self, test):
         '''Impose 840 V on DC bus and read back current draw
@@ -510,11 +546,15 @@ class Tester(QObject):
             if self.myResources.hv_supply.get_current_protection_state():
                 self.myResources.hv_supply.set_output('OFF')
                 self.status.emit('Failed Test 9: Current Limit!')
+                self.resultReady.emit((row, -999)) #generic fail flag for current limit
                 time.sleep(3)
+                self.continueTest = False
+                #self.dischargeCaps() #if fails, discharges caps
                 break
             time.sleep(.3)
-        current = self.myResources.hv_supply.get_current()
-        self.resultReady.emit((row, current))
+        if self.continueTest == True:
+            current = self.myResources.hv_supply.get_current()
+            self.resultReady.emit((row, current))
         self.myResources.hv_supply.set_output('OFF')
         while self.myResources.hv_supply.get_voltage() > 5:
             self.status.emit('Test 9: Voltage still falling')
@@ -536,10 +576,14 @@ class Tester(QObject):
                 self.myResources.hv_supply.set_output('OFF')
                 self.status.emit('Failed Test 10: Current Limit!')
                 time.sleep(3)
+                self.resultReady.emit((row, -999)) #generic fail flag for current limit
+                self.continueTest= False
+                #self.dischargeCaps() #if fails, discharges caps
                 break
             time.sleep(.3)
-        current = self.myResources.hv_supply.get_current()
-        self.resultReady.emit((row, current))
+        if self.continueTest == True:
+            current = self.myResources.hv_supply.get_current()
+            self.resultReady.emit((row, current))
         self.myResources.hv_supply.set_output('OFF')
         while self.myResources.hv_supply.get_voltage() > 5:
             self.status.emit('Test 10: Voltage still falling')
@@ -562,10 +606,14 @@ class Tester(QObject):
                 self.myResources.hv_supply.set_output('OFF')
                 self.status.emit('Failed Test 11: Current Limit!')
                 time.sleep(3)
+                self.resultReady.emit((row, -999)) #generic fail flag for current limit
+                self.continueTest= False
+                #self.dischargeCaps() #if fails, discharges caps
                 break
             time.sleep(.3)
-        current = self.myResources.hv_supply.get_current()
-        self.resultReady.emit((row, current))
+        if self.continueTest == True:
+            current = self.myResources.hv_supply.get_current()
+            self.resultReady.emit((row, current))
         self.myResources.hv_supply.set_output('OFF')
         while self.myResources.hv_supply.get_voltage() > 5:
             self.status.emit('Test 11: Voltage still falling')
@@ -587,10 +635,14 @@ class Tester(QObject):
                 self.myResources.hv_supply.set_output('OFF')
                 self.status.emit('Failed Test 12: Current Limit!')
                 time.sleep(3)
+                self.resultReady.emit((row, -999)) #generic fail flag for current limit
+                self.continueTest= False
+                #self.dischargeCaps() #if fails, discharges caps
                 break
             time.sleep(.3)
-        current = self.myResources.hv_supply.get_current()
-        self.resultReady.emit((row, current))
+        if self.continueTest == True:
+            current = self.myResources.hv_supply.get_current()
+            self.resultReady.emit((row, current))
         self.myResources.hv_supply.set_output('OFF')
         while self.myResources.hv_supply.get_voltage() > 5:
             self.status.emit('Test 12: Voltage still falling')
@@ -609,11 +661,16 @@ class Tester(QObject):
             self.status.emit('Test 13: Voltage still climbing')
             if self.myResources.hv_supply.get_current_protection_state():
                 self.myResources.hv_supply.set_output('OFF')
-                self.status.emit('Current Limit!')
+                self.status.emit('FAIL Test 13: Current Limit!')
+                time.sleep(3)
+                self.resultReady.emit((row, -999)) #generic fail flag for current limit
+                self.continueTest= False
+                #self.dischargeCaps() #if fails, discharges caps
                 break
             time.sleep(.3)
-        current = self.myResources.hv_supply.get_current()
-        self.resultReady.emit((row, current))
+        if self.continueTest == True:
+            current = self.myResources.hv_supply.get_current()
+            self.resultReady.emit((row, current))
         self.myResources.hv_supply.set_output('OFF')
         while self.myResources.hv_supply.get_voltage() > 5:
             self.status.emit('Test 13: Voltage still falling')
@@ -631,11 +688,16 @@ class Tester(QObject):
             self.status.emit('Test 14: Voltage still climbing')
             if self.myResources.hv_supply.get_current_protection_state():
                 self.myResources.hv_supply.set_output('OFF')
-                self.status.emit('Current Limit!')
+                self.status.emit('FAIL Test 14: Current Limit!')
+                time.sleep(3)
+                self.resultReady.emit((row, -999)) #generic fail flag for current limit
+                self.continueTest= False
+                #self.dischargeCaps() #if fails, discharges caps
                 break
             time.sleep(.3)
-        current = self.myResources.hv_supply.get_current()
-        self.resultReady.emit((row, current))
+        if self.continueTest == True:
+            current = self.myResources.hv_supply.get_current()
+            self.resultReady.emit((row, current))
         self.myResources.hv_supply.set_output('OFF')
         while self.myResources.hv_supply.get_voltage() > 5:
             self.status.emit('Test 14: Voltage still falling')
@@ -659,7 +721,7 @@ class Tester(QObject):
         The setup is already done with SetupNoPowerState()
         Perform the scan and read all channels. 
         
-        '''
+        '''        
         load1_on(self.myResources.daq)
         self.status.emit('Running Test 15')
         time.sleep(1)
@@ -734,6 +796,9 @@ class Tester(QObject):
             if (datetime.now() - start).seconds > 250:#170:
                 self.status.emit('FAIL Test 16: Timeout condition on cap charging')
                 time.sleep(2)
+                self.resultReady.emit((row, Vin)) #grabbing Vin, TP2B data even though fault condition occurred              
+                self.resultReady.emit((row+1, -999)) #fault condition
+                self.resultReady.emit((row+2, TP2B))
                 self.continueTest= False
                 self.dischargeCaps() #if fails, discharges caps
                 break
@@ -742,10 +807,10 @@ class Tester(QObject):
             running_values[-1] = data[1]
             settled = (np.diff(running_values) < .5).all()
             if settled:
+                stop = datetime.now()
                 self.status.emit('Test 16: HV Cap has settled')
                 self.resultReady.emit((row, Vin))
-                #self.resultReady.emit((29, Vin))
-                stop = datetime.now()
+                #self.resultReady.emit((29, Vin))                
                 self.resultReady.emit((row+1, data[1]/(stop-start).seconds))
                 #self.resultReady.emit((30, data[1]/(stop-start).seconds))
                 self.resultReady.emit((row+2, TP2B))
