@@ -67,9 +67,9 @@ def discharge_caps(vgs, HVCAPquantity, BuckCurrentquantity, daq):
     #BuckCurrentquantity.measure(daq)
     voltage = HVCAPquantity.measure(daq)
     current = BuckCurrentquantity.measure(daq)
-    if voltage < 10 and current < .1:
+    if voltage < 10 and current < .2:
         set_discharge_Vgs(daq, 10)
-        time.sleep(5)
+        time.sleep(10)
         #print('caps are discharged')
         set_discharge_Vgs(daq, 0)
         return 

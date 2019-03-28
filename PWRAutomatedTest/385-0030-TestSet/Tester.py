@@ -83,15 +83,19 @@ class Tester(QObject):
         if 'inputDiode' in test['NAME'].iloc[0]:
             self.status.emit('Setting up for HV Diode tests')
             close_rl5(self.myResources.daq)#need to enable PSUA so not to turn on SPM mode
+            
+            load1_off(self.myResources.daq)
+            load2_off(self.myResources.daq)
+            load3_off(self.myResources.daq)
+            buck_off(self.myResources.daq)
+            flyback_off(self.myResources.daq)
             self.myResources.hv_supply.set_rising_voltage_slew(100) #50V/sec
             self.myResources.hv_supply.set_output_mode(2) #slew rate priority (ramp slowly)
             self.myResources.hv_supply.apply(840, 100e-3)
             self.myResources.lv_supply.apply(24.0, 1)#turn on PSUA
-            buck_off(self.myResources.daq)
-            load1_off(self.myResources.daq)
-            load2_off(self.myResources.daq)
-            load3_off(self.myResources.daq)
-            flyback_off(self.myResources.daq)
+            self.myResources.lv_supply.set_output('ON')
+            time.sleep(3)
+
         elif 'Threshold' in test['NAME'].iloc[0]:
             self.status.emit('Setting up for threshold checks')
             load1_off(self.myResources.daq)
@@ -168,7 +172,7 @@ class Tester(QObject):
         #return self.data.iloc[row, self.getColumnNumber('MAX')]
     
     def dischargeCaps(self): #IM 3/26/19 - Adding fail state power down event
-        self.continueTest= False # for fail state powerdown events
+        #self.continueTest= False # for fail state powerdown events
         self.myResources.hv_supply.apply(0,0)
         self.myResources.lv_supply.apply(0,0)
         self.status.emit('Discharging Caps')
@@ -760,7 +764,7 @@ class Tester(QObject):
         running_values = np.arange(0,20,1, dtype=float)
         flyback_on(self.myResources.daq)
         buck_off(self.myResources.daq)
-        self.myResources.lv_supply.apply(24, 3)
+        self.myResources.lv_supply.apply(24, 9)
         alist = [self.quantities['24Vout'], self.quantities['HVCAP'], self.quantities['TP2B']]
         self.myResources.daq.setQuantityScan(alist)
         self.myResources.daq.format_reading() 
@@ -793,7 +797,7 @@ class Tester(QObject):
                 self.continueTest= False
                 self.dischargeCaps() #if fails, discharges caps
                 break
-            if (datetime.now() - start).seconds > 250:#170:
+            if (datetime.now() - start).seconds > 200:#170:
                 self.status.emit('FAIL Test 16: Timeout condition on cap charging')
                 time.sleep(2)
                 self.resultReady.emit((row, Vin)) #grabbing Vin, TP2B data even though fault condition occurred              
@@ -835,7 +839,7 @@ class Tester(QObject):
         load1_on(self.myResources.daq)
         load2_on(self.myResources.daq)
         load3_on(self.myResources.daq)
-        buck_on(self.myResources.daq) #sets up buck for SPM mode
+        buck_off(self.myResources.daq) #sets up buck for SPM mode
         self.myResources.hv_supply.apply(800, 1)
         self.myResources.hv_supply.set_output('ON')
         quantity_list = list(self.quantities.values())
@@ -846,6 +850,10 @@ class Tester(QObject):
         end_row=test.index[-1]
         data = self.myResources.daq.read()
         combined = zip(np.arange(start_row, end_row+1), data)
+        #for i in combined:
+        #    print(i)
+        #print('sleeping for 10')
+        #time.sleep(10)
         for pair in combined:
             self.resultReady.emit(pair)
         self.status.emit('Test 17 Complete')
@@ -873,11 +881,17 @@ class Tester(QObject):
         data = self.myResources.daq.read()
         #calculate buck efficiency:
         Vin = self.myResources.hv_supply.get_voltage()
-        Vout = data[10]
+        #print('test 18:')
+        #print('vin:{}'.format(Vin))
+        
+        Vout = data[9]
         Iin = self.myResources.hv_supply.get_current()
         Iout = data[13]
+        #print('vout:{}'.format(Vout))
+        #print('Iin:{}'.format(Iin))
+        #print('Iout:{}'.format(Iout))
         try:
-            data.append((Vout*Iout)/(Vin*Iin))
+            data.append((Vout*Iout)*100/(Vin*Iin))
         except ZeroDivisionError:#DivisionByZero:
             data.append(0)
         combined = zip(np.arange(start_row, end_row+1), data)
@@ -891,11 +905,13 @@ class Tester(QObject):
         '''
         Another NoPowerState check
         '''
+        self.dischargeCaps()
         load1_off(self.myResources.daq)
         load2_on(self.myResources.daq)
         load3_on(self.myResources.daq)
+        
         self.status.emit('Running Test 19')
-        time.sleep(1)
+        time.sleep(10)
         quantity_list = list(self.quantities.values())
         self.myResources.daq.setQuantityScan(quantity_list)
         #start_row = 60
@@ -918,12 +934,15 @@ class Tester(QObject):
         row 78: TP6B, 16V
         row 79: TP2B, Bootstrap
         '''
+        self.status.emit('Starting Test 20!')
+        load1_off(self.myResources.daq)
         load2_off(self.myResources.daq)
         load3_off(self.myResources.daq)
         row=test.index[0]
         
-        running_values = np.arange(0,20,1, dtype=float)
+        running_values = np.arange(0,10,1, dtype=float)
         self.myResources.hv_supply.apply(290, 1.44)
+        
         alist = [self.quantities['HVCAP'], self.quantities['TP5B'],
                  self.quantities['TP1B'], self.quantities['TP6B'],
                  self.quantities['TP2B']]
@@ -936,6 +955,7 @@ class Tester(QObject):
             TP6B = data[3]
             
             #some time saving checks:
+            '''
             if test[test['NAME']=='TP6B']['MAX'].iloc[0] < TP6B < test[test['NAME']=='TP6B']['MIN'].iloc[0]:
             #if self.getMaximum(78) < TP6B < self.getMinimum(78):
                 self.status.emit('FAIL Test 20: 16V rail is out of spec!')
@@ -945,6 +965,7 @@ class Tester(QObject):
                 self.dischargeCaps()#if fails, discharges caps
                 #self.resultReady.emit((78, TP6B))
                 break
+            
             if TP2B < test[test['NAME']=='TP2B']['MIN'].iloc[0]:
             #if TP2B < self.getMinimum(79):
                 self.status.emit('FAIL Test 20: HV Buck Bootstrap out of spec!')
@@ -954,7 +975,8 @@ class Tester(QObject):
                 self.continueTest= False
                 self.dischargeCaps()#if fails, discharges caps
                 break
-            if (datetime.now() - start).seconds > 20:
+            '''
+            if (datetime.now() - start).seconds > 25:
                 self.status.emit('FAIL Test 20: Timeout condition on cap charging')
                 time.sleep(2)
                 self.continueTest= False
@@ -967,11 +989,11 @@ class Tester(QObject):
             if settled:
                 self.status.emit('Test 20: Buck has charged the caps')
                 stop = datetime.now()
-                self.resultReady.emit((75, data[0]/(stop-start).seconds))
-                self.resultReady.emit((76, data[1]/(stop-start).seconds))
-                self.resultReady.emit((77, data[2]))
-                self.resultReady.emit((78, TP6B))
-                self.resultReady.emit((79, TP2B))
+                self.resultReady.emit((row, data[0]/(stop-start).seconds))
+                self.resultReady.emit((row+1, data[1]/(stop-start).seconds))
+                self.resultReady.emit((row+2, data[2]))
+                self.resultReady.emit((row+3, TP6B))
+                self.resultReady.emit((row+4, TP2B))
                 break
             else:
                 self.status.emit('Running Test 20: HV Cap still charging: {:.1f}V'.format(data[0]))
@@ -1001,14 +1023,15 @@ class Tester(QObject):
         #time.sleep(5)
         quantity_list = list(self.quantities.values())
         self.myResources.daq.setQuantityScan(quantity_list)
+        time.sleep(3)
         data = self.myResources.daq.read()
         #calculate buck efficiency:
         Vin = self.myResources.hv_supply.get_voltage()
-        Vout = data[10]
+        Vout = data[9]
         Iin = self.myResources.hv_supply.get_current()
         Iout = data[13]
         try:
-            data.append((Vout*Iout)/(Vin*Iin))
+            data.append((Vout*Iout)*100/(Vin*Iin))
         except ZeroDivisionError:
             data.append(0)
         combined = zip(np.arange(start_row, end_row+1), data)
