@@ -21,9 +21,9 @@ class SelfTester():
         self.myResources = myResources
         self.myResources.Connect()
         self.daq = self.myResources.get_daq()
-        load1_off(self.daq)
-        load2_off(self.daq)
-        load3_off(self.daq)
+        load1_off(self.myResources.daq)
+        load2_off(self.myResources.daq)
+        load3_off(self.myResources.daq)
         
         self.lv_supply = self.myResources.get_lv_supply()
         self.lv_supply.set_output_mode(0)
@@ -61,6 +61,7 @@ class SelfTester():
             result = .99*readback < stimulus < 1.01*readback
             print(self.mystr.format(1, readback, stimulus, result ))
         self.lv_supply.apply(0,.2)
+        self.lv_supply.set_output('OFF')
         return 
     
     def checkPSUBm(self):

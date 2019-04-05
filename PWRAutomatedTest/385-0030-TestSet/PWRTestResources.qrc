@@ -5,4 +5,7 @@
   <qresource prefix="Amber">
     <file>A.PNG</file>
   </qresource>
+  <qresource prefix="Logo">
+    <file>Test Logo2.png</file>
+  </qresource>
 </RCC>

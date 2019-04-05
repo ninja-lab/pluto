@@ -35,6 +35,7 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         self.byte1 = 0b00000000
         self.byte2 = 0b00000000
         
+        
         #self.write('SENSe:TEMPerature:TRANsducer:TCouple:RJUNction:TYPE INTernal (@101:110)')
         
     def set_temp_units(self, ch_list):
@@ -78,7 +79,9 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         That example includes channels 202 through 207, 209, and 302 through 308 in the scan list. 
         '''
         self.inst.write('ROUTe:SCAN {}'.format(scan_list))
-    
+        self.inst.write('ROUTe:CHANnel:DELay:AUTO ON')
+        self.inst.write('INPut:IMPedance:AUTO ON') #{}'.format(scan_list)) #IM changing the input resistance of the keysite(HVCAP,TP5B,TP1B) from 10M to >10G
+
     def set_delay(self, seconds, scan_list):
         ''' Only valid while scanning. CONFigure and MEASure? set the channel delay to automatic
         '''

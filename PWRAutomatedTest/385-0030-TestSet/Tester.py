@@ -3,6 +3,7 @@
 Created on Wed Feb  6 10:16:36 2019
 
 @author: Erik
+@updates by Ivan
 """
 import time
 from PWRTestIO import *
@@ -761,7 +762,7 @@ class Tester(QObject):
         '''
         row = test.index[0]
         #row = 29
-        running_values = np.arange(0,20,1, dtype=float)
+        running_values = np.arange(0,10,1, dtype=float)
         flyback_on(self.myResources.daq)
         buck_off(self.myResources.daq)
         self.myResources.lv_supply.apply(24, 9)
@@ -800,11 +801,13 @@ class Tester(QObject):
             if (datetime.now() - start).seconds > 200:#170:
                 self.status.emit('FAIL Test 16: Timeout condition on cap charging')
                 time.sleep(2)
+
                 self.resultReady.emit((row, Vin)) #grabbing Vin, TP2B data even though fault condition occurred              
                 self.resultReady.emit((row+1, -999)) #fault condition
                 self.resultReady.emit((row+2, TP2B))
                 self.continueTest= False
                 self.dischargeCaps() #if fails, discharges caps
+
                 break
             #update the running values of HV Cap voltages
             running_values[:-1] = running_values[1:]

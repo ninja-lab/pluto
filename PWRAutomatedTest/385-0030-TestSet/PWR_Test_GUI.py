@@ -6,7 +6,7 @@ Created on Tue Feb  5 10:11:55 2019
 """
 import os
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, qApp#, QLabel, QAction
+from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, qApp#, QLabel, QPixmap#, QAction
 from PyQt5.QtCore import pyqtSignal, QThread, QObject
 import pyvisa
 from datetime import datetime
@@ -45,6 +45,7 @@ class MyApp(QMainWindow, Ui_MainWindow):
         #connect some signals to slots
         self.InstrumentsPageButton.pressed.connect(self.showInstrumentsPage)
         self.TestingPageButton.pressed.connect(self.showTestingPage)
+        self.HWCheckerGUIButton.pressed.connect(self.showHWCheckerPage) #IM HW Checker
         self.ConfigFileSelectButton.pressed.connect(self.openFileNameDialog)
         self.actionQuit.triggered.connect(qApp.closeAllWindows)
         #self.actionFunky.triggered.connect(self.setFunkyStyleSheet)
@@ -58,7 +59,9 @@ class MyApp(QMainWindow, Ui_MainWindow):
         self.instrumentsConnected = False
         self.validDUTSerialNumber = False
         self.StartTestButton.setEnabled(False)
+        self.HW_Checker.setEnabled(False)
         self.data = None
+        self.HWdata = None
         self.ConfigFilePath = os.path.realpath(os.path.join(os.getcwd(), 'PWR_Board_TestReportTemplate2.xlsx')) #uploads current directory along with test template into the config file path    
         self.DUTSerialNumber = None
         self.setGeometry(200, 50, 1200, 1000)
@@ -67,6 +70,7 @@ class MyApp(QMainWindow, Ui_MainWindow):
 
         self.obj.resultReady.connect(self.onResultReady)
         self.obj.status.connect(self.TestInfoLineEdit.setText)
+        
         self.RunAllButton.pressed.connect(self.RunAll)
         self.RunNoneButton.pressed.connect(self.RunNone)
         self.StartTestButton.pressed.connect(self.loadTester)
@@ -129,11 +133,28 @@ class MyApp(QMainWindow, Ui_MainWindow):
             self.data['MEASURED'] = self.data['MEASURED'].astype(float)
             self.model = PandasModel(self.data)
             self.tableView.setModel(self.model)
+            
             self.measurement_column = self.model.getColumnNumber('MEASURED')
             self.time_column = self.model.getColumnNumber('TIMESTAMP') 
             self.check_column = self.model.getColumnNumber('Check')
-            self.quantity_df = pd.read_excel(self.ConfigFilePath, 'Quantities')          
+            self.quantity_df = pd.read_excel(self.ConfigFilePath, 'Quantities')
+            
+            self.HWdata = pd.read_excel(self.ConfigFilePath, sheet_name='HWCheck', na_values = np.nan)
+            #otherwise the TIMESTAMP column is loaded as NaN which is float
+            self.HWdata['TIMESTAMP'] = pd.to_datetime(self.data['TIMESTAMP'])
+            self.HWdata['PASS/FAIL'] = self.HWdata['PASS/FAIL'].astype(str) 
+            self.HWdata['TEST #'] = self.HWdata['TEST #'].astype(float)
+            self.HWdata['Check'] = False
+            self.HWdata['MEASURED'] = self.HWdata['MEASURED'].astype(float)
+            self.HWmodel = PandasModel(self.HWdata)
+            self.tableViewHW.setModel(self.HWmodel)
+            
+            self.HWmeasurement_column = self.HWmodel.getColumnNumber('MEASURED')
+            self.HWtime_column = self.HWmodel.getColumnNumber('TIMESTAMP') 
+            self.HWcheck_column = self.HWmodel.getColumnNumber('Check')
+            
             self.checkStartConditions() 
+            self.checkHWConditions() #IM HW checker
         except ValueError:
             self.ConfigFileLineEdit.setText('That is not the config file!')
     def RunAll(self):
@@ -154,10 +175,18 @@ class MyApp(QMainWindow, Ui_MainWindow):
     def showTestingPage(self):
         self.stackedWidget.setCurrentIndex(0)
         self.InstrumentsPageButton.setChecked(False)
+        self.HWCheckerGUIButton.setChecked(False) 
 
     def showInstrumentsPage(self):
-        self.stackedWidget.setCurrentIndex(1)
+        self.stackedWidget.setCurrentIndex(2)
         self.TestingPageButton.setChecked(False)
+        self.HWCheckerGUIButton.setChecked(False) 
+    
+    def showHWCheckerPage(self):
+        self.stackedWidget.setCurrentIndex(1)
+        self.InstrumentsPageButton.setChecked(False) 
+        self.TestingPageButton.setChecked(False)
+        #IM HW Checker
         
     def checkDUTSerialNumber(self):
         self.DUTSerialNumber = self.DUTSerialNumberLineEdit.text()
@@ -168,6 +197,7 @@ class MyApp(QMainWindow, Ui_MainWindow):
     def takeConnectResult(self, result):
         self.instrumentsConnected = result
         self.checkStartConditions()
+        self.checkHWConditions()
     '''
     This class controls whether the StartTestButton is enabled or not. 
     It is enabled if the operator has entered a valid DUT serial number, 
@@ -187,6 +217,17 @@ class MyApp(QMainWindow, Ui_MainWindow):
                 self.TestInfoLineEdit.setText('Enter DUT Serial Number!')
             elif self.ConfigFilePath is None:
                 self.TestInfoLineEdit.setText('Find the Config file!')
+    
+    def checkHWConditions(self):
+        if self.instrumentsConnected and (self.ConfigFilePath is not None):
+            self.HW_Checker.setEnabled(True)
+            self.TestInfoLineEditHW.setText('You can start the HW Checker!')
+        else: 
+            self.HW_Checker.setEnabled(False)
+            if not self.instrumentsConnected:
+                self.TestInfoLineEditHW.setText('Instruments are not connected!')
+            elif self.ConfigFilePath is None:
+                self.TestInfoLineEditHW.setText('Find the Config file!')
     
     def openFileNameDialog(self):
         options = QFileDialog.Options()
