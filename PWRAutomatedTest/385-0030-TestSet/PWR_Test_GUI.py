@@ -3,11 +3,13 @@
 Created on Tue Feb  5 10:11:55 2019
 
 @author: Erik
+@updates by Ivan
 """
 import os
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, qApp#, QLabel, QPixmap#, QAction
+from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, qApp, QLabel#, QPixmap, QAction
 from PyQt5.QtCore import pyqtSignal, QThread, QObject
+from PyQt5.QtGui import QIcon, QPixmap #for label
 import pyvisa
 from datetime import datetime
 from InstrumentConnections import InstrumentConnections
@@ -42,6 +44,12 @@ class MyApp(QMainWindow, Ui_MainWindow):
         Ui_MainWindow.__init__(self)
         self.setupUi(self)
         
+        #Creates the Amber Kinetics Logo
+        self.logo_location = os.path.realpath(os.path.join(os.getcwd(), 'Test Logo2.png'))
+        self.pixmap = QPixmap(self.logo_location)#'C:\\Users\\Ivan Moon\\Documents\\git\\pluto\\PWRAutomatedTest\\385-0030-TestSet\\Test Logo2.png')
+        self.label.setPixmap(self.pixmap)
+        
+        
         #connect some signals to slots
         self.InstrumentsPageButton.pressed.connect(self.showInstrumentsPage)
         self.TestingPageButton.pressed.connect(self.showTestingPage)
@@ -54,12 +62,18 @@ class MyApp(QMainWindow, Ui_MainWindow):
         
         self.ConfigFileLineEdit.editingFinished.connect(self.loadTableData)
         self.DUTSerialNumberLineEdit.editingFinished.connect(self.checkDUTSerialNumber)
+        self.DUTRevNumberLineEdit.editingFinished.connect(self.checkDUTRevNumber)
+        self.HWCheckerSerialNumberLineEdit.editingFinished.connect(self.checkHWCheckerSerialNumber)
         
         #intialize some fields to be used
         self.instrumentsConnected = False
         self.validDUTSerialNumber = False
+        self.validDUTRevNumber = False
+        self.validHWCheckerSerialNumber = False
         self.StartTestButton.setEnabled(False)
         self.HW_Checker.setEnabled(False)
+        self.SaveButton.setEnabled(False)
+        self.SaveHWButton.setEnabled(False)
         self.data = None
         self.HWdata = None
         self.ConfigFilePath = os.path.realpath(os.path.join(os.getcwd(), 'PWR_Board_TestReportTemplate2.xlsx')) #uploads current directory along with test template into the config file path    
@@ -77,6 +91,9 @@ class MyApp(QMainWindow, Ui_MainWindow):
         self.StopTestButton.pressed.connect(self.obj.stopThread.start)
         self.StartSignal.connect(self.obj.startTestThread)
         self.TestCommand.connect(self.obj.takeTestInfo)
+        self.SaveButton.pressed.connect(self.saveFiles)
+        self.SaveButton.pressed.connect(self.saveHWFiles)
+        
         self.PSW80ConnectButton.pressed.connect(self.obj.myResources.Connect)
         self.RefreshButton.pressed.connect(self.obj.myResources.Refresh)
         self.obj.myResources.PSW80ConnectResult.connect(self.PSW80LineEdit.setText)
@@ -155,6 +172,8 @@ class MyApp(QMainWindow, Ui_MainWindow):
             
             self.checkStartConditions() 
             self.checkHWConditions() #IM HW checker
+            self.checkSaveConditions()
+            self.checkHWSaveConditions() #IM HW Checker
         except ValueError:
             self.ConfigFileLineEdit.setText('That is not the config file!')
     def RunAll(self):
@@ -193,11 +212,27 @@ class MyApp(QMainWindow, Ui_MainWindow):
         if self.DUTSerialNumber is not None:
             self.validDUTSerialNumber = True
         self.checkStartConditions()
+        self.checkSaveConditions()
+        
+    def checkHWCheckerSerialNumber(self):
+        self.HWCheckerSerialNumber = self.HWCheckerSerialNumberLineEdit.text()
+        if self.HWCheckerSerialNumber is not None:
+            self.validHWCheckerSerialNumber = True
+        self.checkHWConditions()
+        self.checkHWSaveConditions()
+
+    def checkDUTRevNumber(self):
+        self.DUTRevNumber = self.DUTRevNumberLineEdit.text()
+        if self.DUTRevNumber is not None:
+            self.validDUTRevNumber = True
+        self.checkStartConditions()
+        self.checkSaveConditions()   
         
     def takeConnectResult(self, result):
         self.instrumentsConnected = result
         self.checkStartConditions()
         self.checkHWConditions()
+        self.checkSaveConditions()
     '''
     This class controls whether the StartTestButton is enabled or not. 
     It is enabled if the operator has entered a valid DUT serial number, 
@@ -206,7 +241,7 @@ class MyApp(QMainWindow, Ui_MainWindow):
     def checkStartConditions(self):
         #probably need more robust checking on form of serial number
     
-        if self.instrumentsConnected and self.validDUTSerialNumber and (self.ConfigFilePath is not None):
+        if self.instrumentsConnected and self.validDUTRevNumber and self.validDUTSerialNumber and (self.ConfigFilePath is not None):
             self.StartTestButton.setEnabled(True)
             self.TestInfoLineEdit.setText('You can start the test!')
         else: 
@@ -215,6 +250,8 @@ class MyApp(QMainWindow, Ui_MainWindow):
                 self.TestInfoLineEdit.setText('Instruments are not connected!')
             elif not self.validDUTSerialNumber:
                 self.TestInfoLineEdit.setText('Enter DUT Serial Number!')
+            elif not self.validDUTRevNumber:
+                self.TestInfoLineEdit.setText('Enter DUT Revision Number!')
             elif self.ConfigFilePath is None:
                 self.TestInfoLineEdit.setText('Find the Config file!')
     
@@ -228,7 +265,35 @@ class MyApp(QMainWindow, Ui_MainWindow):
                 self.TestInfoLineEditHW.setText('Instruments are not connected!')
             elif self.ConfigFilePath is None:
                 self.TestInfoLineEditHW.setText('Find the Config file!')
+            elif not self.validHWCheckerSerialNumber:
+                self.TestInfoLineEditHW.setText('Enter HW Checker Serial Number!')
     
+    def checkSaveConditions(self):
+        if self.instrumentsConnected and self.validDUTRevNumber and self.validDUTSerialNumber and (self.ConfigFilePath is not None):
+            self.SaveButton.setEnabled(True)
+        else: 
+            self.SaveButton.setEnabled(False)
+            if not self.instrumentsConnected:
+                self.TestInfoLineEdit.setText('Instruments are not connected!')
+            elif not self.validDUTSerialNumber:
+                self.TestInfoLineEdit.setText('Enter DUT Serial Number!')
+            elif not self.validDUTRevNumber:
+                self.TestInfoLineEdit.setText('Enter DUT Revision Number!')
+            elif self.ConfigFilePath is None:
+                self.TestInfoLineEdit.setText('Find the Config file!')
+
+    def checkHWSaveConditions(self):
+        if self.instrumentsConnected and self.validHWCheckerSerialNumber and (self.ConfigFilePath is not None):
+            self.SaveHWButton.setEnabled(True)
+        else: 
+            self.SaveHWButton.setEnabled(False)
+            if not self.instrumentsConnected:
+                self.TestInfoLineEdit.setText('Instruments are not connected!')
+            elif not self.validHWCheckerSerialNumber:
+                self.TestInfoLineEdit.setText('Enter HW Checker Serial Number!')
+            elif self.ConfigFilePath is None:
+                self.TestInfoLineEdit.setText('Find the Config file!')
+
     def openFileNameDialog(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -237,7 +302,26 @@ class MyApp(QMainWindow, Ui_MainWindow):
             self.ConfigFileLineEdit.setText(fileName)
             self.ConfigFilePath = fileName
             self.ConfigFileLineEdit.editingFinished.emit()
+            
+    def saveFiles(self):
+        timeStamp = datetime.now().strftime('_-_%a_%B_%d_%Y_%I_%M_%p')
+        self.SaveData = 'PowerBoard_SerNum_{}_Rev_{}_Results{}.csv'.format(self.DUTSerialNumber, self.DUTRevNumber, timeStamp)
+        self.SaveFilePath = os.path.join(os.path.expanduser('~'), 'Desktop', 'Test_Results', self.SaveData)
+        #print(self.SaveFilePath)
+        #self.SaveFilePath = os.path.realpath(os.path.join(os.getcwd(), 'PWR_Board_TestReport_', self.DUTSerialNumber, datetime.now().year, datetime.now().hour, datetime.now().minute, datetime.now().second, '.csv'))
+        self.model._data.to_csv(self.SaveFilePath)
         
+        self.TestInfoLineEdit.setText('Data has been saved!')
+        
+    def saveHWFiles(self):
+        timeStamp = datetime.now().strftime('_-_%a_%B_%d_%Y_%I_%M_%p')
+        self.SaveHWData = 'HW_Checker_SerNum_{}_Results{}.csv'.format(self.DUTSerialNumber, timeStamp)
+        self.SaveHWFilePath = os.path.join(os.path.expanduser('~'), 'Desktop', 'Test_Results', self.SaveData)
+        #print(self.SaveFilePath)
+        #self.SaveFilePath = os.path.realpath(os.path.join(os.getcwd(), 'PWR_Board_TestReport_', self.DUTSerialNumber, datetime.now().year, datetime.now().hour, datetime.now().minute, datetime.now().second, '.csv'))
+        self.model._data.to_csv(self.SaveHWFilePath)
+        
+        self.TestInfoLineEditHW.setText('HW Checker Data has been saved!')   
 if __name__ == "__main__":
     app = QApplication(sys.argv)#sys.argv
     window = MyApp()

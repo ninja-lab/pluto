@@ -14,6 +14,8 @@ from datetime import datetime
 from PyQt5.QtCore import  QObject, pyqtSignal, pyqtSlot
 from threading import Thread
 
+
+
 class Tester(QObject):
     #finished = pyqtSignal()
     resultReady = pyqtSignal(tuple)
@@ -126,7 +128,7 @@ class Tester(QObject):
         self.testThread.start()
         return
     
-    
+
     def startTest(self):
         #loads 1-3 on 385-0046 Rev B are each 10 ohm. 24^2/10 = 57.6W
         #self.continueTest=True
@@ -159,6 +161,7 @@ class Tester(QObject):
         self.status.emit('Discharging Caps')
         self.dischargeCaps()
         self.status.emit('Done all the tests!')
+        
         return
 
     '''
