@@ -729,7 +729,8 @@ class Tester(QObject):
         The setup is already done with SetupNoPowerState()
         Perform the scan and read all channels. 
         
-        '''        
+        '''     
+        self.dischargeCaps() #required for discharge after test 14
         load1_on(self.myResources.daq)
         self.status.emit('Running Test 15')
         time.sleep(1)
@@ -801,7 +802,7 @@ class Tester(QObject):
                 self.continueTest= False
                 self.dischargeCaps() #if fails, discharges caps
                 break
-            if (datetime.now() - start).seconds > 200:#170:
+            if (datetime.now() - start).seconds > 300:#170:
                 self.status.emit('FAIL Test 16: Timeout condition on cap charging')
                 time.sleep(2)
 

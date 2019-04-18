@@ -7,7 +7,7 @@ Created on Tue Feb  5 10:11:55 2019
 """
 import os
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, qApp, QLabel#, QPixmap, QAction
+from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, qApp, QLabel, QWidget, QMessageBox, QPushButton#, QPixmap, QAction
 from PyQt5.QtCore import pyqtSignal, QThread, QObject
 from PyQt5.QtGui import QIcon, QPixmap #for label
 import pyvisa
@@ -19,6 +19,7 @@ import numpy as np
 from PandasModel import PandasModel
 #from PandasModel2 import PandasModel2
 import Tester
+import SelfTester2
 #import style_strings
 import PWRTestResources_rc
 
@@ -38,6 +39,9 @@ class MyApp(QMainWindow, Ui_MainWindow):
     DisplayMessage = pyqtSignal(str)
     TestCommand = pyqtSignal(list)
     StartSignal = pyqtSignal()
+    
+    TestHWCommand = pyqtSignal(list)
+    StartHWSignal = pyqtSignal()
 
     def __init__(self,):
         QMainWindow.__init__(self,)
@@ -87,12 +91,35 @@ class MyApp(QMainWindow, Ui_MainWindow):
         
         self.RunAllButton.pressed.connect(self.RunAll)
         self.RunNoneButton.pressed.connect(self.RunNone)
+        
         self.StartTestButton.pressed.connect(self.loadTester)
         self.StopTestButton.pressed.connect(self.obj.stopThread.start)
         self.StartSignal.connect(self.obj.startTestThread)
         self.TestCommand.connect(self.obj.takeTestInfo)
         self.SaveButton.pressed.connect(self.saveFiles)
-        self.SaveButton.pressed.connect(self.saveHWFiles)
+                
+        '''
+        HW checker setup
+        '''
+        self.objhw = SelfTester2.SelfTester2(InstrumentConnections(pyvisa.ResourceManager()))
+
+        self.objhw.resultReady.connect(self.onHWResultReady)
+        self.objhw.status.connect(self.TestInfoLineEditHW.setText)
+        
+        self.RunAllHWButton.pressed.connect(self.RunAllHW)
+        self.RunNoneHWButton.pressed.connect(self.RunNoneHW)
+        
+        self.HW_Checker.pressed.connect(self.loadHWTester)
+        self.StopHWTestButton.pressed.connect(self.objhw.stopHWThread.start)
+        self.StartHWSignal.connect(self.objhw.startHWTestThread)
+        self.TestHWCommand.connect(self.objhw.takeHWTestInfo)
+        self.SaveHWButton.pressed.connect(self.saveHWFiles)
+        
+        
+        
+        '''
+        End HW Checker setup
+        '''
         
         self.PSW80ConnectButton.pressed.connect(self.obj.myResources.Connect)
         self.RefreshButton.pressed.connect(self.obj.myResources.Refresh)
@@ -100,7 +127,18 @@ class MyApp(QMainWindow, Ui_MainWindow):
         self.obj.myResources.PSW800ConnectResult.connect(self.PSW800LineEdit.setText)
         self.obj.myResources.KeysightConnectResult.connect(self.KeysightLineEdit.setText)
         self.obj.myResources.ConnectResult.connect(self.takeConnectResult)
-
+        
+        
+        '''
+        HW Checker setup
+        '''
+        self.objhw.myResources.PSW80ConnectResult.connect(self.PSW80LineEdit.setText)
+        self.objhw.myResources.PSW800ConnectResult.connect(self.PSW800LineEdit.setText)
+        self.objhw.myResources.KeysightConnectResult.connect(self.KeysightLineEdit.setText)
+        self.objhw.myResources.ConnectResult.connect(self.takeConnectResult)
+        '''
+        End HW Checker setup
+        '''
         self.ConfigFileLineEdit.setText(self.ConfigFilePath) #uploading file
         self.ConfigFileLineEdit.editingFinished.emit()
     '''    
@@ -120,6 +158,13 @@ class MyApp(QMainWindow, Ui_MainWindow):
         self.TestCommand.emit(testinginfo)#sends to the tester all the test info
         self.StartSignal.emit()
         return
+
+    def loadHWTester(self):
+        testinginfo = self.HWmodel.getCheckedTests2()
+        testinginfo.append(self.quantity_df)
+        self.TestHWCommand.emit(testinginfo)#sends to the tester all the test info
+        self.StartHWSignal.emit()
+        return   
     
     def onResultReady(self, tup):
         row = tup[0]
@@ -130,6 +175,16 @@ class MyApp(QMainWindow, Ui_MainWindow):
             self.model.setData(self.model.index(row, passfail_column), 'pass')
         else:
             self.model.setData(self.model.index(row, passfail_column), 'FAIL!')
+
+    def onHWResultReady(self, tup):
+        row = tup[0]
+        passfail_column = self.HWmodel.getColumnNumber('PASS/FAIL')
+        self.HWmodel.setData(self.HWmodel.index(row,self.measurement_column),tup[1])
+        self.HWmodel.setData(self.HWmodel.index(row,self.time_column),datetime.now())
+        if (self.HWmodel.getMinimum(row) <= tup[1]) and (tup[1] <= self.HWmodel.getMaximum(row)):
+            self.HWmodel.setData(self.HWmodel.index(row, passfail_column), 'pass')
+        else:
+            self.HWmodel.setData(self.HWmodel.index(row, passfail_column), 'FAIL!')
 
     def loadTableData(self):
         '''
@@ -156,9 +211,10 @@ class MyApp(QMainWindow, Ui_MainWindow):
             self.check_column = self.model.getColumnNumber('Check')
             self.quantity_df = pd.read_excel(self.ConfigFilePath, 'Quantities')
             
+            #HW checker setup
             self.HWdata = pd.read_excel(self.ConfigFilePath, sheet_name='HWCheck', na_values = np.nan)
             #otherwise the TIMESTAMP column is loaded as NaN which is float
-            self.HWdata['TIMESTAMP'] = pd.to_datetime(self.data['TIMESTAMP'])
+            self.HWdata['TIMESTAMP'] = pd.to_datetime(self.HWdata['TIMESTAMP'])
             self.HWdata['PASS/FAIL'] = self.HWdata['PASS/FAIL'].astype(str) 
             self.HWdata['TEST #'] = self.HWdata['TEST #'].astype(float)
             self.HWdata['Check'] = False
@@ -190,6 +246,21 @@ class MyApp(QMainWindow, Ui_MainWindow):
             for row in self.model._data.index:
                 index = self.model.index(row,self.check_column)
                 self.model.setData(index, False)
+                
+    def RunAllHW(self):
+        '''
+        Convenience function for checking all check boxes at once. 
+        The table is loaded initially with all unchecked. 
+        '''
+        if self.HWdata is not None:
+            for row in self.HWmodel._data.index:
+                index = self.HWmodel.index(row,self.check_column)
+                self.HWmodel.setData(index, True)
+    def RunNoneHW(self):
+        if self.HWdata is not None:
+            for row in self.HWmodel._data.index:
+                index = self.HWmodel.index(row,self.check_column)
+                self.HWmodel.setData(index, False)
         
     def showTestingPage(self):
         self.stackedWidget.setCurrentIndex(0)
@@ -256,7 +327,7 @@ class MyApp(QMainWindow, Ui_MainWindow):
                 self.TestInfoLineEdit.setText('Find the Config file!')
     
     def checkHWConditions(self):
-        if self.instrumentsConnected and (self.ConfigFilePath is not None):
+        if self.instrumentsConnected and self.validHWCheckerSerialNumber and (self.ConfigFilePath is not None):
             self.HW_Checker.setEnabled(True)
             self.TestInfoLineEditHW.setText('You can start the HW Checker!')
         else: 
@@ -288,11 +359,11 @@ class MyApp(QMainWindow, Ui_MainWindow):
         else: 
             self.SaveHWButton.setEnabled(False)
             if not self.instrumentsConnected:
-                self.TestInfoLineEdit.setText('Instruments are not connected!')
+                self.TestInfoLineEditHW.setText('Instruments are not connected!')
             elif not self.validHWCheckerSerialNumber:
-                self.TestInfoLineEdit.setText('Enter HW Checker Serial Number!')
+                self.TestInfoLineEditHW.setText('Enter HW Checker Serial Number!')
             elif self.ConfigFilePath is None:
-                self.TestInfoLineEdit.setText('Find the Config file!')
+                self.TestInfoLineEditHW.setText('Find the Config file!')
 
     def openFileNameDialog(self):
         options = QFileDialog.Options()
@@ -315,11 +386,11 @@ class MyApp(QMainWindow, Ui_MainWindow):
         
     def saveHWFiles(self):
         timeStamp = datetime.now().strftime('_-_%a_%B_%d_%Y_%I_%M_%p')
-        self.SaveHWData = 'HW_Checker_SerNum_{}_Results{}.csv'.format(self.DUTSerialNumber, timeStamp)
-        self.SaveHWFilePath = os.path.join(os.path.expanduser('~'), 'Desktop', 'Test_Results', self.SaveData)
+        self.SaveHWData = 'HW_Checker_SerNum_{}_Results{}.csv'.format(self.HWCheckerSerialNumber, timeStamp)
+        self.SaveHWFilePath = os.path.join(os.path.expanduser('~'), 'Desktop', 'Test_Results', self.SaveHWData)
         #print(self.SaveFilePath)
         #self.SaveFilePath = os.path.realpath(os.path.join(os.getcwd(), 'PWR_Board_TestReport_', self.DUTSerialNumber, datetime.now().year, datetime.now().hour, datetime.now().minute, datetime.now().second, '.csv'))
-        self.model._data.to_csv(self.SaveHWFilePath)
+        self.HWmodel._data.to_csv(self.SaveHWFilePath)
         
         self.TestInfoLineEditHW.setText('HW Checker Data has been saved!')   
 if __name__ == "__main__":

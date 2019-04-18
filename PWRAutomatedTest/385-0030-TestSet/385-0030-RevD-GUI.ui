@@ -51,7 +51,7 @@
          <x>0</x>
          <y>0</y>
          <width>1012</width>
-         <height>727</height>
+         <height>717</height>
         </rect>
        </property>
        <property name="styleSheet">
@@ -59,48 +59,49 @@
 			background-color: #FFFFFF
 		}    
        LCDNumber {
-            background-color : #08233F;
+            background-color : #425563;
             color : #FFAA33;
-            border: 2px solid #FFBB33;
+            border: 2px solid #E46A3C;
             margin: 2px;       
         
         }
         QLabel {
-            background-color : #08233F;
-            color : #FFAA33;
+            background-color : #FFFFFF;
+            color : #E46A3C;
        
-			font-size: 14pt;
+			font-size: 12pt;
+			
 			qproperty-alignment: AlignCenter;
         }
 	
 		QLineEdit {
-		    background-color : #08233F;
-            color : #FFAA33;
-			border-radius: 4px;
-            border: 4px solid #FFAA33;
+		    background-color : #f2f2f2;
+            color : #E46A3C;
+			border-radius: 3px;
+            border: 3px solid #E46A3C;
 			font-size: 14pt;
 			selection-background-color: darkgray
 		
 		}
 
 	   QPushButton:checked {
-            background-color : #42C2F4;
-            color : #1c030d;
+            background-color : #E46A3C;
+            color : #FFFFFF;
             border-radius: 4px;
-            border: 4px solid #FFAA33;
+            border: 4px solid #E46A3C;
 			font-size: 14px
 		}
 
 	   QPushButton {
-            background-color : #08233F;
-            color : #FFAA33;
-            border-radius: 4px;
-            border: 4px solid #FFAA33;
+            background-color : #425563;
+            color : #eca80b;
+            border-radius: 3px;
+            border: 3px solid #E46A3C;
 			font-size: 14px
 		}
 
 	QTableView {
-			background-color: gray}</string>
+			background-color: #a6a6a6}</string>
        </property>
        <layout class="QGridLayout" name="gridLayout_2">
         <item row="0" column="0">
@@ -446,14 +447,14 @@
                  </size>
                 </property>
                 <property name="text">
-                 <string>DUT Serial Number</string>
+                 <string>DUT Serial Number:</string>
                 </property>
                </widget>
               </item>
               <item row="0" column="2">
                <widget class="QLabel" name="label_6">
                 <property name="text">
-                 <string>Board Revision</string>
+                 <string>Board Revision:</string>
                 </property>
                </widget>
               </item>
@@ -499,7 +500,7 @@
              </spacer>
             </item>
             <item>
-             <layout class="QGridLayout" name="gridLayout_6" rowstretch="0,0" columnstretch="0,0,0">
+             <layout class="QGridLayout" name="gridLayout_6" rowstretch="0,0,0" columnstretch="0,0,0,0,0">
               <property name="sizeConstraint">
                <enum>QLayout::SetDefaultConstraint</enum>
               </property>
@@ -518,21 +519,14 @@
               <property name="spacing">
                <number>5</number>
               </property>
-              <item row="1" column="2">
-               <spacer name="horizontalSpacer_5">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
+              <item row="2" column="3">
+               <widget class="QPushButton" name="RunNoneHWButton">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
                 </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>20</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_7">
                 <property name="minimumSize">
                  <size>
                   <width>100</width>
@@ -542,50 +536,28 @@
                 <property name="maximumSize">
                  <size>
                   <width>200</width>
-                  <height>100</height>
+                  <height>50</height>
                  </size>
                 </property>
                 <property name="text">
-                 <string>HW Checker S/N:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QLineEdit" name="HWCheckerSerialNumberLineEdit">
-                <property name="maximumSize">
-                 <size>
-                  <width>250</width>
-                  <height>100</height>
-                 </size>
+                 <string>Run None</string>
                 </property>
                </widget>
               </item>
               <item row="0" column="1">
                <layout class="QGridLayout" name="gridLayout_7">
                 <item row="0" column="0">
-                 <widget class="QPushButton" name="SaveHWButton">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
+                 <spacer name="horizontalSpacer_6">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
                   </property>
-                  <property name="minimumSize">
+                  <property name="sizeHint" stdset="0">
                    <size>
-                    <width>100</width>
-                    <height>50</height>
+                    <width>40</width>
+                    <height>20</height>
                    </size>
                   </property>
-                  <property name="maximumSize">
-                   <size>
-                    <width>250</width>
-                    <height>100</height>
-                   </size>
-                  </property>
-                  <property name="text">
-                   <string>Save HW Checker Results</string>
-                  </property>
-                 </widget>
+                 </spacer>
                 </item>
                </layout>
               </item>
@@ -602,14 +574,14 @@
                 </property>
                 <property name="minimumSize">
                  <size>
-                  <width>200</width>
+                  <width>100</width>
                   <height>50</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
                   <width>200</width>
-                  <height>50</height>
+                  <height>100</height>
                  </size>
                 </property>
                 <property name="layoutDirection">
@@ -620,18 +592,102 @@
                 </property>
                </widget>
               </item>
-              <item row="0" column="2">
-               <spacer name="horizontalSpacer_6">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_7">
+                <property name="minimumSize">
                  <size>
-                  <width>40</width>
-                  <height>20</height>
+                  <width>175</width>
+                  <height>50</height>
                  </size>
                 </property>
-               </spacer>
+                <property name="maximumSize">
+                 <size>
+                  <width>200</width>
+                  <height>100</height>
+                 </size>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>12</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>HW Checker S/N:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QLineEdit" name="HWCheckerSerialNumberLineEdit">
+                <property name="maximumSize">
+                 <size>
+                  <width>450</width>
+                  <height>100</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="4">
+               <widget class="QPushButton" name="SaveHWButton">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>100</width>
+                  <height>50</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>250</width>
+                  <height>100</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Save HW Checker Results</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="4">
+               <widget class="QPushButton" name="StopHWTestButton">
+                <property name="minimumSize">
+                 <size>
+                  <width>150</width>
+                  <height>50</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>200</width>
+                  <height>100</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Stop HW Check</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="3">
+               <widget class="QPushButton" name="RunAllHWButton">
+                <property name="minimumSize">
+                 <size>
+                  <width>100</width>
+                  <height>50</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>200</width>
+                  <height>100</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Run All</string>
+                </property>
+               </widget>
               </item>
              </layout>
             </item>
@@ -676,7 +732,7 @@
                  </size>
                 </property>
                 <property name="text">
-                 <string>Instek PSW80-13.5</string>
+                 <string>Instek PSW80-13.5:</string>
                 </property>
                </widget>
               </item>
@@ -695,7 +751,7 @@
                  </size>
                 </property>
                 <property name="text">
-                 <string>Keysight 34972A</string>
+                 <string>Keysight 34972A:</string>
                 </property>
                </widget>
               </item>
@@ -752,7 +808,7 @@
                  </size>
                 </property>
                 <property name="text">
-                 <string>Instek PSW800-1.44</string>
+                 <string>Instek PSW800-1.44:</string>
                 </property>
                </widget>
               </item>
@@ -906,7 +962,7 @@
      <x>0</x>
      <y>0</y>
      <width>1036</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
