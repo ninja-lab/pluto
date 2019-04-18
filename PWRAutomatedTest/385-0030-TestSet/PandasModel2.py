@@ -30,19 +30,19 @@ class PandasModel2(QtCore.QAbstractTableModel):
             return
         value = self._data.iloc[index.row(), index.column()]
         if role == QtCore.Qt.DisplayRole:
-            if index.column() != 4: 
+            if index.column() != self.getColumnNumber('Check'): 
                 if index.column() in [1,2,3]:
                     return '{:.3f}'.format(value)    
                 if index.column() == 0:
                     return '{:.2f}'.format(value)
                 return str(value)
         elif role == QtCore.Qt.CheckStateRole:  
-            if index.column() == 4:
+            if index.column() == self.getColumnNumber('Check'):
                 
                 return QtCore.Qt.Checked if value else QtCore.Qt.Unchecked
         elif index.column() == self.getColumnNumber('MEASURED'):
             if role == QtCore.Qt.BackgroundRole:
-                print('value: {}, type: {}'.format(value, type(value)))
+                #print('value: {}, type: {}'.format(value, type(value)))
                 if np.isnan(value):
                     return QtGui.QColor("red")
                 elif (self.getMinimum(index.row()) > value) or (self.getMaximum(index.row()) < value):
@@ -107,15 +107,21 @@ class PandasModel2(QtCore.QAbstractTableModel):
             for row in self.getCoupledRows(index.row()):
                 self._data.iat[row, index.column()] = value
             self.layoutChanged.emit()
-            print(self.getCheckedTests())
+            #print(self.getCheckedTests())
             return True
         else:
             return False
     def getCoupledRows(self, row):
-        if row <= 2:
-            return []
+        #if row <= 2:
+        #    return []
         #mask = self._data['TEST #'].values.astype(int) == int(self._data['TEST #'][row])
-        mask = self._data['TEST #'].values.astype(int) >= 4#int(self._data['TEST #'][row])
+        #mask = self._data['TEST #'].values.astype(int) >= 4#int(self._data['TEST #'][row])
+        test_num = 
+        
+        print('row: {}'.format(row))
+        mask = self._data['TEST #'].values.astype(int) == row
+        print('mask: ')
+        print(mask)
         return self._data['TEST #'][mask].index
     def getCheckedTests(self):
         '''

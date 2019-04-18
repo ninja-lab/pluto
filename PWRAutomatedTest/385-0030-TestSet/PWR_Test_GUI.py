@@ -16,7 +16,7 @@ from InstrumentConnections import InstrumentConnections
 from PyQt5 import uic
 import pandas as pd
 import numpy as np
-from PandasModel import PandasModel
+from PandasModel import PandasModel, HWCHeckerPandasModel
 #from PandasModel2 import PandasModel2
 import Tester
 import SelfTester2
@@ -219,7 +219,7 @@ class MyApp(QMainWindow, Ui_MainWindow):
             self.HWdata['TEST #'] = self.HWdata['TEST #'].astype(float)
             self.HWdata['Check'] = False
             self.HWdata['MEASURED'] = self.HWdata['MEASURED'].astype(float)
-            self.HWmodel = PandasModel(self.HWdata)
+            self.HWmodel = HWCHeckerPandasModel(self.HWdata)
             self.tableViewHW.setModel(self.HWmodel)
             
             self.HWmeasurement_column = self.HWmodel.getColumnNumber('MEASURED')

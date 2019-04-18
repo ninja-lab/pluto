@@ -150,3 +150,17 @@ class PandasModel(QtCore.QAbstractTableModel):
         for i in self.getCheckedTests():
             alist.append(self._data.loc[self._data['TEST #'].astype(int) == i,:])
         return alist  
+
+class HWCHeckerPandasModel(PandasModel):
+    def __init__(self, data, parent=None):
+        PandasModel.__init__(self, data, parent = None)
+        
+    def getCoupledRows(self, row):
+        test_num = self._data.iloc[row]['TEST #'].astype(int)
+        mask = self._data['TEST #'].values.astype(int) == test_num 
+        return self._data['TEST #'][mask].index
+        
+        
+        
+    
+    

@@ -44,13 +44,13 @@ class Example(QWidget):
             print(df)
             print(df[df['NAME']=='a']['MEASURED'])
             
-        '''
+        
         w=QtWidgets.QWidget()
         l1 = QtWidgets.QLabel(w)
         l1.setText('This is a test error prompt')
         w.setWindowTitle('Test Error')
         w.show()
-        
+        '''
         data = pd.DataFrame(np.random.randint(1,10, size=(12,4)), columns=['TEST #','MIN', 'MAX','MEASURED'])
         data['MEASURED'][2] = np.nan
         data['NAME'] = ['a','b','c','a','b','c','a','b','c','a','b','c']
@@ -61,7 +61,8 @@ class Example(QWidget):
         data['Check'] = True
         self.model = PandasModel2(data)
         print(data)
-        flag = False
+        #flag = False
+        '''
         for df in self.model.getCheckedTests2():
             print(df)
             print(df[df['NAME']=='b']['MEASURED'].iloc[0])
@@ -70,7 +71,7 @@ class Example(QWidget):
             elif 18 == df['MAX'].iloc[0] and flag:
                 print('Test 1')
                 flag = False
-        '''     
+        
         self.SaveFilePath = 'C:\\Users\\Ivan Moon\\Documents\\AK M32 Documents\\Power Board Test csv files\\_TEST_CSV_.csv'
         data.to_csv(self.SaveFilePath)
         '''
