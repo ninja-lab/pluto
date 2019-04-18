@@ -24,61 +24,26 @@ class SelfTester2(QObject):
     resultReady = pyqtSignal(tuple)
     status = pyqtSignal(str)
     testDone = pyqtSignal()
-    
+    needYesOrNo = pyqtSignal(str)
 
     
     def __init__(self, myResources):
         super().__init__()
+     
         self.myResources = myResources
-        self.myResources.Connect()
         self.daq = self.myResources.get_daq()
-        
-        '''
-        self.mystr = 'Test {}: Readback: {:.2f}, Input: {:.2f}, Result: {}'
-        self.quantity_df = pd.read_excel('C:\\Users\\Erik\\git\\pluto\\PWRAutomatedTest\\385-0030-TestSet\\PWR_Board_TestReportTemplate2.xlsx', 'Quantities')          
-        self.testInfo = None
-        self.quantities = {}
-        for row in self.quantity_df.iterrows():
-            ser = row[1] #(index, Series) comes from iterrows()
-            column_names = ser.index.tolist()
-            my_dict = {}
-            for column_name in column_names:
-                my_dict[column_name] = ser[column_name]
-            new_quantity = quantity(my_dict)
-            self.quantities[new_quantity.getStringName()] = new_quantity
-        '''
-        #start
-        #self.testInfo = None
         self.quantity_df = None
         self.testHWInfo = None
         self.continueHWTest =True
+        self.diodeResult = None
         #the stopThread is only started when the stop button is pressed
         self.stopHWThread = Thread(target = self.listenForHWStop, name='stop')
 
-
-        #self.HWtestFunctions = {1:self.checkPSUAm, 2:self.checkPSUBm}#{1:self.HWdebugtest}
-        
         self.HWtestFunctions = {1:self.checkPSUAm, 2:self.checkPSUBm, 3:self.checkTP5B,
                               4:self.checkTP1B, 5:self.testLoads, 
                               6:self.testRibbon, 7:self.LEDcheck}
         
-        
-    @pyqtSlot()
-    def window(self, title, message, result):
-        self.title = 'PyQt5 messagebox - pythonspot.com'
-        #self.setWindowTitle(self.title)
-        self.setGeometry(10, 10, 320, 200)
- 
-        buttonReply = QMessageBox.question(self, title, message, QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if buttonReply == QMessageBox.Yes:
-            print('Yes clicked.')
-            self.failresult = True
-        else:
-            print('No clicked.')
-            self.failresult = False
-        #self.show()
-        return   
-    
+
     def listenForHWStop(self):
         self.continueHWTest= False
         self.status.emit('Stopping Test')
@@ -120,44 +85,6 @@ class SelfTester2(QObject):
         
         self.hv_supply = self.myResources.get_hv_supply()
         self.hv_supply.set_output_mode(0)
-        
-        '''
-        if 'inputDiode' in test['NAME'].iloc[0]:
-            self.status.emit('Setting up for HV Diode tests')
-            close_rl5(self.myResources.daq)#need to enable PSUA so not to turn on SPM mode
-            
-            load1_off(self.myResources.daq)
-            load2_off(self.myResources.daq)
-            load3_off(self.myResources.daq)
-            buck_off(self.myResources.daq)
-            flyback_off(self.myResources.daq)
-            self.myResources.hv_supply.set_rising_voltage_slew(100) #50V/sec
-            self.myResources.hv_supply.set_output_mode(2) #slew rate priority (ramp slowly)
-            self.myResources.hv_supply.apply(840, 100e-3)
-            self.myResources.lv_supply.apply(24.0, 1)#turn on PSUA
-            self.myResources.lv_supply.set_output('ON')
-            time.sleep(3)
-
-        elif 'Threshold' in test['NAME'].iloc[0]:
-            self.status.emit('Setting up for threshold checks')
-            load1_off(self.myResources.daq)
-            load2_off(self.myResources.daq)
-            load3_off(self.myResources.daq)
-            flyback_off(self.myResources.daq)
-            buck_off(self.myResources.daq)
-            if 'PSUA' in test['TEST DESCRIPTION'].iloc[0]:
-                close_rl5(self.myResources.daq)
-            elif 'PSUB' in test['TEST DESCRIPTION'].iloc[0]:
-                #self.myResources.lv_supply.apply(0,0.2) #discharge PSUA caps (still work in progress), trying to prevent issue where PSUA and PSUB LEDs ON at same time
-                self.myResources.hv_supply.apply(0,0)
-                self.myResources.lv_supply.apply(0,0)                
-                open_rl5(self.myResources.daq)
-        elif 'Caps Charging' in test['TEST DESCRIPTION'].iloc[0]: 
-            load1_off(self.myResources.daq)
-            load2_off(self.myResources.daq)
-            load3_off(self.myResources.daq)
-            close_rl5(self.myResources.daq)
-        '''
         return
     
     @pyqtSlot()
@@ -194,38 +121,9 @@ class SelfTester2(QObject):
         self.myResources.hv_supply.set_output_mode(0)
         self.myResources.lv_supply.apply(0,0)
 
-        '''
-        Discharge the caps using the beefy MOSFET on the interface board:
-        
-        self.status.emit('Discharging Caps')
-        self.dischargeCaps()
-        self.status.emit('Done all the tests!')
-        '''
         return
 
-    '''
-    For the threshold tests, it is useful to know the min and max acceptable values,
-    because the test can be slow if sweeping a large range and stepping small. 
-    Unfortunately, the data exists in two places, but is only read from for convienence 
-    here.  NOTE: IM 3/26/2019 data dataframe produces error, found better method test[test['NAME']== thing ['MIN'].iloc[0]
-    '''
-    #def getMinimum(self, row):
-        #return self.data.iloc[row, self.getColumnNumber('MIN')]
-    #def getMaximum(self, row):
-        #return self.data.iloc[row, self.getColumnNumber('MAX')]
-    '''
-    def dischargeCaps(self): #IM 3/26/19 - Adding fail state power down event
-        #self.continueTest= False # for fail state powerdown events
-        self.myResources.hv_supply.apply(0,0)
-        self.myResources.lv_supply.apply(0,0)
-        self.status.emit('Discharging Caps')
-        discharge_caps(2.3, self.quantities['HVCAP'], self.quantities['BuckCurrent'],
-                       self.myResources.daq)
-        cap_voltage = self.quantities['HVCAP'].measure(self.myResources.daq)
-        self.status.emit('Cap Voltage: {:.2f}V'.format(cap_voltage))
-        time.sleep(3)
-        return
-    '''
+    
     def getColumnNumber(self, string):
         '''
         Given a string that identifies a label/column, 
@@ -264,52 +162,12 @@ class SelfTester2(QObject):
             row += 1
             time.sleep(1)
             readback = self.quantities['PSUA'].measure(self.daq) 
-            '''
-            stimulus = self.lv_supply.get_voltage()
-            result = .99*readback < stimulus < 1.01*readback
-            print(voltage)
-            print(readback)
-            print(stimulus)
-            print(result)
-            print('!!!DONE!!!!')
-            '''
+
             self.resultReady.emit((row, readback)) #read the input
-            #self.resultReady.emit((row, readback)) #read the input
         self.lv_supply.apply(0,.2)
         self.lv_supply.set_output('OFF')     
         return 
-        '''
-        #debug function to see how to input rows
         
-        self.status.emit('Running Test 2: PSUA UVLO Falling')
-        row = self.getRow(test)
-
-        stopVoltage = test['MIN'].iloc[0] 
-        startVoltage = test['MAX'].iloc[0]
-        self.myResources.lv_supply.apply(startVoltage+.3, 1)
-        self.myResources.lv_supply.set_output('ON')
-
-        time.sleep(5)
-        self.status.emit('Running Test 2: Voltage Ramp')
-        for i in np.arange(startVoltage+.3, stopVoltage, -.01): #sweep voltage range
-            self.myResources.lv_supply.apply(i, 1) #(voltage, current)
-            time.sleep(.1)
-            output = self.quantities['24Vout'].measure(self.myResources.daq)
-            _input = self.quantities['PSUA'].measure(self.myResources.daq)
-            if  not (.99*_input < output < 1.01*_input): #checks if PMOS is OFF
-                #self.updateModel(row, _input)
-                self.resultReady.emit((row, _input)) #read the input after PMOS is OFF
-                self.myResources.lv_supply.set_output('OFF')
-                self.status.emit('Test 2: PSUA UVLO Falling - PASS')
-                return
-        self.myResources.lv_supply.set_output('OFF')
-        self.status.emit('Failed Test 2: PSUA UVLO Falling - FAIL')
-        self.resultReady.emit((row, np.nan))
-        time.sleep(2)
-        self.continueTest= False
-        self.dischargeCaps() #if fails, discharges caps
-        return
-        '''
     def checkPSUBm(self, test):
         '''
         Feed the 80V instek to PSUAm with SelfTest Cable __
@@ -329,15 +187,6 @@ class SelfTester2(QObject):
             row += 1
             readbackB = self.quantities['PSUB'].measure(self.daq) 
             readbackC = self.quantities['PSUC'].measure(self.daq) 
-            '''
-            stimulus = self.lv_supply.get_voltage()
-            result = .99*readback < stimulus < 1.01*readback
-            print(voltage)
-            print(readback)
-            print(stimulus)
-            print(result)
-            print('!!!DONE!!!!')
-            '''
             self.resultReady.emit((row, readbackB)) #read the input
             self.resultReady.emit((row+5, readbackC)) #read the input
             
@@ -364,15 +213,7 @@ class SelfTester2(QObject):
             readback5b = self.quantities['TP5B'].measure(self.daq) 
             readback6b = self.quantities['TP6B'].measure(self.daq) 
             readbackhv = self.quantities['HVCAP'].measure(self.daq)
-            '''
-            stimulus = self.lv_supply.get_voltage()
-            result = .99*readback < stimulus < 1.01*readback
-            print(voltage)
-            print(readback)
-            print(stimulus)
-            print(result)
-            print('!!!DONE!!!!')
-            '''
+
             self.resultReady.emit((row, readback5b)) #read the TP5B input
             self.resultReady.emit((row+5, readback6b)) #read the TP6B input
             self.resultReady.emit((row+10, readbackhv)) #read the TP6B input
@@ -410,40 +251,7 @@ class SelfTester2(QObject):
         self.hv_supply.set_output('OFF')
         return        
     
-    def checkHVCAP(self, test):
-        '''
-        Output HV supply to PBUS/NBUS 
-        
-        NOTE: removed. to be included in TP 5 test
-        
-        open_rl1(self.daq)
-        open_rl2(self.daq)
-        close_rl3(self.daq)
-        close_rl4(self.daq)
-        '''
-        close_rl1(self.daq)
-        open_rl2(self.daq) #because R11 connects to HVCAP
-        
-        self.hv_supply.apply(0, 1)
-        self.hv_supply.set_output('ON')
-        #row = self.getRow(test) - 1
-        row = 39
-        
-        for voltage in np.arange(3.2,16.2,3.2,dtype=float):
-            self.hv_supply.apply(voltage, .2)
-            time.sleep(1)
-            row +=1
-            readback = self.quantities['HVCAP'].measure(self.daq)
-            '''
-            stimulus = self.hv_supply.get_voltage()
-            result = .99*readback < stimulus < 1.01*readback
-            print(self.mystr.format(4, readback, stimulus, result ))
-            '''
-            #time.sleep(2)
-            self.resultReady.emit((row, readback)) #read the input
-        self.hv_supply.apply(0,.2)
-        self.hv_supply.set_output('OFF')
-        return
+   
 
     def exercise_relays(self):
         
@@ -564,18 +372,20 @@ class SelfTester2(QObject):
         #result = 3.8 < readback < 4.2
         #print(self.mystr.format(8, readback, 4, result))
         return
+    
+    def takeDiodeResult(self, result):
+        self.diodeResult = result
+        
     def LEDcheck(self, test):
         
         #row = self.getRow(test)
-        row = 49
-        self.failresult = False
-        #self.setWindowTitle("QTableView")
+        row = 51
+
         '''
         Va Vb visual check/RL3, RL4 check
         '''
-        self.failtitle = 'DS1 Diode check'
-        self.failmessage = "Is DS1 lit up?"
-        self.failresult = False
+
+
         
         
         open_rl1(self.myResources.daq)
@@ -586,14 +396,18 @@ class SelfTester2(QObject):
         self.myResources.hv_supply.apply(4,0.1)
         self.myResources.hv_supply.set_output('ON')
         time.sleep(.2)
-        self.window(self.failtitle,self.failmessage,self.failresult)
-        self.resultReady.emit((row, self.failresult)) #read the input
+        self.needYesOrNo.emit('Is DS1 lit?')
+        while(self.diodeResult is None):
+            time.sleep(.2)
+     
+        self.resultReady.emit((row, self.diodeResult)) #read the input
+        self.diodeResult = None
         self.myResources.hv_supply.set_output('OFF')
         
         
         '''
         Va Vc visual check/RL3, RL4 check
-        '''
+        
         self.failtitle = 'DS2 Diode check'
         self.failmessage = "Is DS2 lit up?"
         self.failresult = False
@@ -611,9 +425,9 @@ class SelfTester2(QObject):
         self.resultReady.emit((row, self.failresult)) #read the input
         self.myResources.hv_supply.set_output('OFF')
         
-        '''
+        
         Vb Va visual check/RL3, RL4 check
-        '''
+        
         self.failtitle = 'DS3 Diode check'
         self.failmessage = "Is DS3 lit up?"
         self.failresult = False
@@ -630,10 +444,10 @@ class SelfTester2(QObject):
         self.window(self.failtitle,self.failmessage,self.failresult)
         self.resultReady.emit((row, self.failresult)) #read the input
         self.myResources.hv_supply.set_output('OFF')
+    
         
-        '''
         Vc Va visual check/RL3, RL4 check
-        '''
+        
         self.failtitle = 'DS4 Diode check'
         self.failmessage = "Is DS4 lit up?"
         self.failresult = False
@@ -651,7 +465,10 @@ class SelfTester2(QObject):
         self.resultReady.emit((row, self.failresult)) #read the input
         self.myResources.hv_supply.set_output('OFF')
         self.myResources.hv_supply.apply(0,0.1)
+        '''
         return
+        
+        
     def HWdebugtest(self, test):
         _input = 5555
         row = self.getRow(test)

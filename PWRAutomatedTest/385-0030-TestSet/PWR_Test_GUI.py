@@ -17,11 +17,10 @@ from PyQt5 import uic
 import pandas as pd
 import numpy as np
 from PandasModel import PandasModel, HWCHeckerPandasModel
-#from PandasModel2 import PandasModel2
 import Tester
 import SelfTester2
 #import style_strings
-import PWRTestResources_rc
+#import PWRTestResources_rc
 
 qtCreatorFile = "385-0030-RevD-GUI.ui"
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
@@ -42,6 +41,8 @@ class MyApp(QMainWindow, Ui_MainWindow):
     
     TestHWCommand = pyqtSignal(list)
     StartHWSignal = pyqtSignal()
+    
+    diodeResult = pyqtSignal(bool)
 
     def __init__(self,):
         QMainWindow.__init__(self,)
@@ -84,7 +85,8 @@ class MyApp(QMainWindow, Ui_MainWindow):
         self.DUTSerialNumber = None
         self.setGeometry(200, 50, 1200, 1000)
     
-        self.obj = Tester.Tester(InstrumentConnections(pyvisa.ResourceManager()))
+        self.myInstruments = InstrumentConnections(pyvisa.ResourceManager())
+        self.obj = Tester.Tester(self.myInstruments)
 
         self.obj.resultReady.connect(self.onResultReady)
         self.obj.status.connect(self.TestInfoLineEdit.setText)
@@ -101,10 +103,13 @@ class MyApp(QMainWindow, Ui_MainWindow):
         '''
         HW checker setup
         '''
-        self.objhw = SelfTester2.SelfTester2(InstrumentConnections(pyvisa.ResourceManager()))
+        self.objhw = SelfTester2.SelfTester2(self.myInstruments)
 
         self.objhw.resultReady.connect(self.onHWResultReady)
         self.objhw.status.connect(self.TestInfoLineEditHW.setText)
+        
+        self.objhw.needYesOrNo.connect(self.showMessageBox)
+        self.diodeResult.connect(self.objhw.takeDiodeResult)
         
         self.RunAllHWButton.pressed.connect(self.RunAllHW)
         self.RunNoneHWButton.pressed.connect(self.RunNoneHW)
@@ -115,43 +120,21 @@ class MyApp(QMainWindow, Ui_MainWindow):
         self.TestHWCommand.connect(self.objhw.takeHWTestInfo)
         self.SaveHWButton.pressed.connect(self.saveHWFiles)
         
-        
-        
         '''
         End HW Checker setup
         '''
         
         self.PSW80ConnectButton.pressed.connect(self.obj.myResources.Connect)
         self.RefreshButton.pressed.connect(self.obj.myResources.Refresh)
-        self.obj.myResources.PSW80ConnectResult.connect(self.PSW80LineEdit.setText)
-        self.obj.myResources.PSW800ConnectResult.connect(self.PSW800LineEdit.setText)
-        self.obj.myResources.KeysightConnectResult.connect(self.KeysightLineEdit.setText)
-        self.obj.myResources.ConnectResult.connect(self.takeConnectResult)
         
-        
-        '''
-        HW Checker setup
-        '''
-        self.objhw.myResources.PSW80ConnectResult.connect(self.PSW80LineEdit.setText)
-        self.objhw.myResources.PSW800ConnectResult.connect(self.PSW800LineEdit.setText)
-        self.objhw.myResources.KeysightConnectResult.connect(self.KeysightLineEdit.setText)
-        self.objhw.myResources.ConnectResult.connect(self.takeConnectResult)
-        '''
-        End HW Checker setup
-        '''
+        self.myInstruments.PSW80ConnectResult.connect(self.PSW80LineEdit.setText)
+        self.myInstruments.PSW800ConnectResult.connect(self.PSW800LineEdit.setText)
+        self.myInstruments.KeysightConnectResult.connect(self.KeysightLineEdit.setText)
+        self.myInstruments.ConnectResult.connect(self.takeConnectResult)
+ 
         self.ConfigFileLineEdit.setText(self.ConfigFilePath) #uploading file
         self.ConfigFileLineEdit.editingFinished.emit()
-    '''    
-    def setFunkyStyleSheet(self):
-        qApp.setStyleSheet(style_strings.funky)
-        #self.centralWidget.setStyleSheet(style_strings.funky)
-    def setRetroStyleSheet(self):
-        qApp.setStyleSheet(style_strings.retro)
-    def setNoneStyleSheet(self):
-        qApp.setStyleSheet('')
-        #self.centralWidget.setStyleSheet('')
-        self.scrollAreaWidgetContents.setStyleSheet('')
-   '''
+
     def loadTester(self):
         testinginfo = self.model.getCheckedTests2()
         testinginfo.append(self.quantity_df)
@@ -391,8 +374,23 @@ class MyApp(QMainWindow, Ui_MainWindow):
         #print(self.SaveFilePath)
         #self.SaveFilePath = os.path.realpath(os.path.join(os.getcwd(), 'PWR_Board_TestReport_', self.DUTSerialNumber, datetime.now().year, datetime.now().hour, datetime.now().minute, datetime.now().second, '.csv'))
         self.HWmodel._data.to_csv(self.SaveHWFilePath)
+        self.TestInfoLineEditHW.setText('HW Checker Data has been saved!') 
         
-        self.TestInfoLineEditHW.setText('HW Checker Data has been saved!')   
+    def showMessageBox(self, str1):
+        '''
+        The SelfTester2 emits a signal when it needs this GUI to 
+        ask the user a yes or no question (about diodes being lit up)
+        '''
+        title = 'Diode Check'
+        buttonReply = QMessageBox.question(QWidget(), title, str1, QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        
+        if buttonReply == QMessageBox.Yes:
+            self.diodeResult.emit(True)
+        else:
+            self.diodeResult.emit(False)
+            
+        
+        
 if __name__ == "__main__":
     app = QApplication(sys.argv)#sys.argv
     window = MyApp()
