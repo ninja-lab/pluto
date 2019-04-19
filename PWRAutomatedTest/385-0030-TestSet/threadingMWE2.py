@@ -6,7 +6,7 @@ Created on Tue Mar  5 17:40:17 2019
 """
 
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, QThread, QObject
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject
 from threading import Thread
 import time
 import sys
@@ -24,7 +24,6 @@ class master(QObject):
         
 class worker(QObject):
     def __init__(self):
-        
         super().__init__()
         self.continueTest = True
         self.stopThread = Thread(target = self.listenForStop, name='stop')
@@ -42,6 +41,7 @@ class worker(QObject):
             else:
                 return
         return
+    
     @pyqtSlot()   
     def startLongFunction(self):
         self.testThread = Thread(target = self.longFunction, name='test')
