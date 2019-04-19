@@ -31,7 +31,9 @@ class SelfTester2(QObject):
         super().__init__()
      
         self.myResources = myResources
-        self.daq = self.myResources.get_daq()
+        #self.daq = self.myResources.get_daq()
+        #self.myResources.Connect()
+        
         self.quantity_df = None
         self.testHWInfo = None
         self.continueHWTest =True
@@ -150,22 +152,22 @@ class SelfTester2(QObject):
         self.status.emit('Setting up for PSUA Check')
         
         
-        close_rl5(self.daq)
+        close_rl5(self.myResources.daq)
         time.sleep(1)
-        self.lv_supply.apply(0,1)
-        self.lv_supply.set_output('ON')
+        self.myResources.lv_supply.apply(0,1)
+        self.myResources.lv_supply.set_output('ON')
         row = self.getRow(test) - 1
         i = 0
         for voltage in np.arange(5,30,5,dtype=float):
-            self.lv_supply.apply(voltage, 5)
+            self.myResources.lv_supply.apply(voltage, 5)
             i += 1
             row += 1
             time.sleep(1)
-            readback = self.quantities['PSUA'].measure(self.daq) 
+            readback = self.quantities['PSUA'].measure(self.myResources.daq) 
 
             self.resultReady.emit((row, readback)) #read the input
-        self.lv_supply.apply(0,.2)
-        self.lv_supply.set_output('OFF')     
+        self.myResources.lv_supply.apply(0,.2)
+        self.myResources.lv_supply.set_output('OFF')     
         return 
         
     def checkPSUBm(self, test):
@@ -173,71 +175,71 @@ class SelfTester2(QObject):
         Feed the 80V instek to PSUAm with SelfTest Cable __
         Adjust a few times and verify the readback matches
         '''
-        open_rl5(self.daq)
+        open_rl5(self.myResources.daq)
         time.sleep(1)
-        self.lv_supply.apply(0,1)
-        self.lv_supply.set_output('ON')
+        self.myResources.lv_supply.apply(0,1)
+        self.myResources.lv_supply.set_output('ON')
         #row = self.getRow(test) - 1
         row = 4
         i = 0
         for voltage in np.arange(5,30,5,dtype=float):
-            self.lv_supply.apply(voltage, 5)
+            self.myResources.lv_supply.apply(voltage, 5)
             time.sleep(1)
             i += 1
             row += 1
-            readbackB = self.quantities['PSUB'].measure(self.daq) 
-            readbackC = self.quantities['PSUC'].measure(self.daq) 
+            readbackB = self.quantities['PSUB'].measure(self.myResources.daq) 
+            readbackC = self.quantities['PSUC'].measure(self.myResources.daq) 
             self.resultReady.emit((row, readbackB)) #read the input
             self.resultReady.emit((row+5, readbackC)) #read the input
             
-        self.lv_supply.apply(0,.2)
-        self.lv_supply.set_output('OFF')
+        self.myResources.lv_supply.apply(0,.2)
+        self.myResources.lv_supply.set_output('OFF')
         return
     
     def checkTP5B(self, test):
         '''
         Output HV supply to PBUS/NBUS 
         '''
-        close_rl1(self.daq)
-        open_rl2(self.daq)
-        self.hv_supply.apply(0, .2)
-        self.hv_supply.set_output('ON')
+        close_rl1(self.myResources.daq)
+        open_rl2(self.myResources.daq)
+        self.myResources.hv_supply.apply(0, .2)
+        self.myResources.hv_supply.set_output('ON')
         #row = self.getRow(test) - 1
         row = 14
         
         for voltage in np.arange(6,36,6,dtype=float):
-            self.hv_supply.apply(voltage, 1)
+            self.myResources.hv_supply.apply(voltage, 1)
             time.sleep(1)
             
             row += 1
-            readback5b = self.quantities['TP5B'].measure(self.daq) 
-            readback6b = self.quantities['TP6B'].measure(self.daq) 
-            readbackhv = self.quantities['HVCAP'].measure(self.daq)
+            readback5b = self.quantities['TP5B'].measure(self.myResources.daq) 
+            readback6b = self.quantities['TP6B'].measure(self.myResources.daq) 
+            readbackhv = self.quantities['HVCAP'].measure(self.myResources.daq)
 
             self.resultReady.emit((row, readback5b)) #read the TP5B input
             self.resultReady.emit((row+5, readback6b)) #read the TP6B input
             self.resultReady.emit((row+10, readbackhv)) #read the TP6B input
-        self.hv_supply.apply(0,.2)
-        self.hv_supply.set_output('OFF')
+        self.myResources.hv_supply.apply(0,.2)
+        self.myResources.hv_supply.set_output('OFF')
         return
             
     def checkTP1B(self, test):
         '''
         Output HV supply to PBUS/NBUS 
         '''
-        close_rl1(self.daq)
-        close_rl2(self.daq)
-        self.hv_supply.apply(0, .2)
-        self.hv_supply.set_output('ON')
+        close_rl1(self.myResources.daq)
+        close_rl2(self.myResources.daq)
+        self.myResources.hv_supply.apply(0, .2)
+        self.myResources.hv_supply.set_output('ON')
         #row = self.getRow(test) - 1
         row = 29
         
         for voltage in np.arange(6,36,6,dtype=float):
             #print('programmed: {}'.format(voltage))
             self.hv_supply.apply(voltage, 1)
-            time.sleep(5)
-            readback1b = self.quantities['TP1B'].measure(self.daq) 
-            readback2b = self.quantities['TP2B'].measure(self.daq) 
+            time.sleep(2)
+            readback1b = self.quantities['TP1B'].measure(self.myResources.daq) 
+            readback2b = self.quantities['TP2B'].measure(self.myResources.daq) 
             
             row += 1
             '''
@@ -247,8 +249,8 @@ class SelfTester2(QObject):
             '''
             self.resultReady.emit((row, readback1b)) #read the TP5B input
             self.resultReady.emit((row+5, readback2b)) #read the TP6B input
-        self.hv_supply.apply(0,.2)
-        self.hv_supply.set_output('OFF')
+        self.myResources.hv_supply.apply(0,.2)
+        self.myResources.hv_supply.set_output('OFF')
         return        
     
    
@@ -256,36 +258,36 @@ class SelfTester2(QObject):
     def exercise_relays(self):
         
         for i in range(5):
-            close_rl1(self.daq)
+            close_rl1(self.myResources.daq)
             time.sleep(.2)
-            close_rl2(self.daq)
+            close_rl2(self.myResources.daq)
             time.sleep(.2)
-            close_rl3(self.daq)
+            close_rl3(self.myResources.daq)
             time.sleep(.2)
-            close_rl4(self.daq)
+            close_rl4(self.myResources.daq)
             time.sleep(.2)
-            close_rl5(self.daq)
+            close_rl5(self.myResources.daq)
             time.sleep(2)
-            open_rl1(self.daq)
+            open_rl1(self.myResources.daq)
             time.sleep(.2)
-            open_rl2(self.daq)
+            open_rl2(self.myResources.daq)
             time.sleep(.2)
-            open_rl3(self.daq)
+            open_rl3(self.myResources.daq)
             time.sleep(.2)
-            open_rl4(self.daq)
+            open_rl4(self.myResources.daq)
             time.sleep(.2)
-            open_rl5(self.daq)
+            open_rl5(self.myResources.daq)
             time.sleep(2)
         return 
     
     def testLoads(self, test):
-        load1_off(self.daq)
-        load2_off(self.daq)
-        load3_off(self.daq)
+        load1_off(self.myResources.daq)
+        load2_off(self.myResources.daq)
+        load3_off(self.myResources.daq)
         #row = self.getRow(test)
         row = 40
         time.sleep(1)
-        load = self.daq.measure_Resistance(self.quantities['24Vout'].getChannel())
+        load = self.myResources.daq.measure_Resistance(self.quantities['24Vout'].getChannel())
         #result = load > 1e6
         #print(self.mystr.format(5, load, 1e9, result))
         if load > 9999999:
@@ -295,80 +297,87 @@ class SelfTester2(QObject):
         self.resultReady.emit((row, load)) #read the input
         
         
-        load1_on(self.daq)
+        load1_on(self.myResources.daq)
         time.sleep(1)
-        load = self.daq.measure_Resistance(self.quantities['24Vout'].getChannel())
+        load = self.myResources.daq.measure_Resistance(self.quantities['24Vout'].getChannel())
         #result = .9*10 < load < 1.1*10
         #print(self.mystr.format(5, load, 10, result))
-        load1_off(self.daq)
+        load1_off(self.myResources.daq)
         self.resultReady.emit((row+1, load)) #read the input
         
-        load2_on(self.daq)
+        load2_on(self.myResources.daq)
         time.sleep(1)
-        load = self.daq.measure_Resistance(self.quantities['24Vout'].getChannel())
+        load = self.myResources.daq.measure_Resistance(self.quantities['24Vout'].getChannel())
         #result = .9*10 < load < 1.1*10
         #print(self.mystr.format(5, load, 10, result))
-        load2_off(self.daq)
+        load2_off(self.myResources.daq)
         self.resultReady.emit((row+2, load)) #read the input
         
-        load3_on(self.daq)
+        load3_on(self.myResources.daq)
         time.sleep(1)
-        load = self.daq.measure_Resistance(self.quantities['24Vout'].getChannel())
+        load = self.myResources.daq.measure_Resistance(self.quantities['24Vout'].getChannel())
         #result = .9*10 < load < 1.1*10
         #print(self.mystr.format(5, load, 10, result))
-        load3_off(self.daq)
+        load3_off(self.myResources.daq)
         self.resultReady.emit((row+3, load)) #read the input
         time.sleep(1)
         return
     def testRibbon(self, test):
-        buck_off(self.daq)
+        buck_off(self.myResources.daq)
         time.sleep(1)
         row = 44
-        readback = self.quantities['PSU_FLT'].measure(self.daq)
+        
+        readback = self.quantities['PSU_FLT'].measure(self.myResources.daq)
         #result = readback < .2
         #print(self.mystr.format(6, readback, 0, result))
         self.resultReady.emit((row, readback))
        
         row +=1
-        buck_on(self.daq)
+        buck_on(self.myResources.daq)
         time.sleep(1)
-        readback = self.quantities['PSU_FLT'].measure(self.daq)
+        readback = self.quantities['PSU_FLT'].measure(self.myResources.daq)
+        readbackflt = self.quantities['FLT_OUT'].measure(self.myResources.daq)
         #result = readback > 4
         #print(self.mystr.format(6, readback, 5, result))
         self.resultReady.emit((row, readback))
-        buck_off(self.daq)
+        self.resultReady.emit((row+5, readbackflt))
+        buck_off(self.myResources.daq)
         
         row +=1
-        flyback_on(self.daq)
+        flyback_on(self.myResources.daq)
         time.sleep(1)
-        readback = self.quantities['SPM'].measure(self.daq)
+        readback = self.quantities['SPM'].measure(self.myResources.daq)
         #result = readback > 4
         #print(self.mystr.format(7, readback, 5, result))
         self.resultReady.emit((row, readback))
         
         row +=1
-        readback = self.quantities['TEMP'].measure(self.daq)
+        alist = [self.quantities['TEMP']]
+        self.myResources.daq.setQuantityScan(alist)
+        readbackTemp = self.myResources.daq.read()#= self.quantities['TEMP'].measure(self.myResources.daq)
         #print(feedback)
-        self.resultReady.emit((row, readback))
+        self.resultReady.emit((row, readbackTemp[0]))
         
         row +=1
-        flyback_off(self.daq)
+        flyback_off(self.myResources.daq)
         time.sleep(1)
-        readback = self.quantities['SPM'].measure(self.daq)
+        readback = self.quantities['SPM'].measure(self.myResources.daq)
         #result = readback < .2
         #print(self.mystr.format(7, readback, 0, result))
         self.resultReady.emit((row, readback))
         
         row +=1
-        readback = self.quantities['TEMP'].measure(self.daq)
-        self.resultReady.emit((row, readback))
         
-        flyback_off(self.daq)
+        readbackTemp = self.myResources.daq.read()#= self.quantities['TEMP'].measure(self.myResources.daq)
+        self.resultReady.emit((row, readbackTemp[0]))
+        
+        flyback_off(self.myResources.daq)
         
         
-        row +=1
-        readback = self.quantities['FLT_OUT'].measure(self.daq)
-        self.resultReady.emit((row, readback))
+        
+        
+        
+        
         #result = 3.8 < readback < 4.2
         #print(self.mystr.format(8, readback, 4, result))
         return
@@ -396,7 +405,7 @@ class SelfTester2(QObject):
         self.myResources.hv_supply.apply(4,0.1)
         self.myResources.hv_supply.set_output('ON')
         time.sleep(.2)
-        self.needYesOrNo.emit('Is DS1 lit?')
+        self.needYesOrNo.emit('Is DS1 lit [Va to Vb]?')
         while(self.diodeResult is None):
             time.sleep(.2)
      
@@ -407,10 +416,7 @@ class SelfTester2(QObject):
         
         '''
         Va Vc visual check/RL3, RL4 check
-        
-        self.failtitle = 'DS2 Diode check'
-        self.failmessage = "Is DS2 lit up?"
-        self.failresult = False
+        '''
         row += 1
         
         #open_rl1(self.myResources.daq)
@@ -418,19 +424,21 @@ class SelfTester2(QObject):
         close_rl4(self.myResources.daq)
         time.sleep(1)
         
-        #self.myResources.hv_supply.apply(4,0.1)
+        
         self.myResources.hv_supply.set_output('ON')
         time.sleep(.2)
-        self.window(self.failtitle,self.failmessage,self.failresult)
-        self.resultReady.emit((row, self.failresult)) #read the input
+        self.needYesOrNo.emit('Is DS2 lit [Va to Vc]?')
+        while(self.diodeResult is None):
+            time.sleep(.2)
+     
+        self.resultReady.emit((row, self.diodeResult)) #read the input
+        self.diodeResult = None
         self.myResources.hv_supply.set_output('OFF')
         
-        
+        '''
         Vb Va visual check/RL3, RL4 check
+        '''
         
-        self.failtitle = 'DS3 Diode check'
-        self.failmessage = "Is DS3 lit up?"
-        self.failresult = False
         row += 1
         
         #open_rl1(self.myResources.daq)
@@ -438,19 +446,22 @@ class SelfTester2(QObject):
         close_rl4(self.myResources.daq)
         time.sleep(1)
         
-        #self.myResources.hv_supply.apply(4,0.1)
+        
         self.myResources.hv_supply.set_output('ON')
         time.sleep(.2)
-        self.window(self.failtitle,self.failmessage,self.failresult)
-        self.resultReady.emit((row, self.failresult)) #read the input
+        self.needYesOrNo.emit('Is DS3 lit [Vb to Va]?')
+        while(self.diodeResult is None):
+            time.sleep(.2)
+     
+        self.resultReady.emit((row, self.diodeResult)) #read the input
+        self.diodeResult = None
+        
         self.myResources.hv_supply.set_output('OFF')
     
-        
+        '''
         Vc Va visual check/RL3, RL4 check
+        '''
         
-        self.failtitle = 'DS4 Diode check'
-        self.failmessage = "Is DS4 lit up?"
-        self.failresult = False
         row += 1
         
         #open_rl1(self.myResources.daq)
@@ -461,11 +472,15 @@ class SelfTester2(QObject):
         #self.myResources.hv_supply.apply(4,0.1)
         self.myResources.hv_supply.set_output('ON')
         time.sleep(.2)
-        self.window(self.failtitle,self.failmessage,self.failresult)
-        self.resultReady.emit((row, self.failresult)) #read the input
+        self.needYesOrNo.emit('Is DS4 lit [Vc to Va]?')
+        while(self.diodeResult is None):
+            time.sleep(.2)
+     
+        self.resultReady.emit((row, self.diodeResult)) #read the input
+        self.diodeResult = None
         self.myResources.hv_supply.set_output('OFF')
         self.myResources.hv_supply.apply(0,0.1)
-        '''
+        
         return
         
         

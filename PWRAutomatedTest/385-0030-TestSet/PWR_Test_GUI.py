@@ -124,8 +124,8 @@ class MyApp(QMainWindow, Ui_MainWindow):
         End HW Checker setup
         '''
         
-        self.PSW80ConnectButton.pressed.connect(self.obj.myResources.Connect)
-        self.RefreshButton.pressed.connect(self.obj.myResources.Refresh)
+        self.InstrumentConnectButton.pressed.connect(self.myInstruments.Connect)
+        self.RefreshButton.pressed.connect(self.myInstruments.Refresh)              
         
         self.myInstruments.PSW80ConnectResult.connect(self.PSW80LineEdit.setText)
         self.myInstruments.PSW800ConnectResult.connect(self.PSW800LineEdit.setText)
@@ -388,7 +388,6 @@ class MyApp(QMainWindow, Ui_MainWindow):
             self.diodeResult.emit(True)
         else:
             self.diodeResult.emit(False)
-            
         
         
 if __name__ == "__main__":
