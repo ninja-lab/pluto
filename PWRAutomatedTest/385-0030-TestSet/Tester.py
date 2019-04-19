@@ -113,6 +113,7 @@ class Tester(QObject):
                 self.myResources.hv_supply.apply(0,0)
                 self.myResources.lv_supply.apply(0,0)                
                 open_rl5(self.myResources.daq)
+                time.sleep(3)
         elif 'Caps Charging' in test['TEST DESCRIPTION'].iloc[0]: 
             load1_off(self.myResources.daq)
             load2_off(self.myResources.daq)
@@ -224,6 +225,7 @@ class Tester(QObject):
             self.myResources.lv_supply.set_output('OFF') 
             time.sleep(2)
             self.continueTest= False
+            self.resultReady.emit((row, -99))
             self.dischargeCaps() #if fails, discharges caps
             return        
         startVoltage = test['MIN'].iloc[0]-.3 #self.getMinimum(row)
@@ -242,7 +244,7 @@ class Tester(QObject):
                 return 
         self.myResources.lv_supply.set_output('OFF')
         self.status.emit('Failed Test 1: PSUA UVLO Rising - FAIL')
-        self.resultReady.emit((row, np.nan))
+        self.resultReady.emit((row, -88))
         time.sleep(2)
         self.continueTest= False
         self.dischargeCaps() #if fails, discharges caps
@@ -280,7 +282,7 @@ class Tester(QObject):
                 return
         self.myResources.lv_supply.set_output('OFF')
         self.status.emit('Failed Test 2: PSUA UVLO Falling - FAIL')
-        self.resultReady.emit((row, np.nan))
+        self.resultReady.emit((row, -88))
         time.sleep(2)
         self.continueTest= False
         self.dischargeCaps() #if fails, discharges caps
@@ -306,6 +308,7 @@ class Tester(QObject):
             self.status.emit('Failed Test 3: Shorted Inner Diode-PMOS')
             self.myResources.lv_supply.set_output('OFF') 
             time.sleep(2)
+            self.resultReady.emit((row, -99))
             self.continueTest= False
             self.dischargeCaps() #if fails, discharges caps
             return
@@ -331,7 +334,7 @@ class Tester(QObject):
                 return 
         self.myResources.lv_supply.set_output('OFF')
         self.status.emit('Failed Test 3: PSUA OVLO Rising - FAIL')
-        self.resultReady.emit((row, np.nan))
+        self.resultReady.emit((row, -88))
         time.sleep(2)
         self.continueTest= False
         self.dischargeCaps() #if fails, discharges caps
@@ -369,7 +372,7 @@ class Tester(QObject):
                 return
         self.myResources.lv_supply.set_output('OFF')
         self.status.emit('Failed Test 4: PSUA OVLO Falling - FAIL')
-        self.resultReady.emit((row, np.nan))
+        self.resultReady.emit((row, -88))
         time.sleep(2)
         self.continueTest= False
         self.dischargeCaps() #if fails, discharges caps
@@ -385,6 +388,7 @@ class Tester(QObject):
         row = self.getRow(test)
         self.myResources.lv_supply.apply(10,1)
         self.myResources.lv_supply.set_output('ON')
+        time.sleep(5)
         #first check at 10V to see if there is a shorted inner diode
         output = self.quantities['24Vout'].measure(self.myResources.daq)
         _input = self.quantities['PSUB'].measure(self.myResources.daq)
@@ -394,6 +398,7 @@ class Tester(QObject):
             self.myResources.lv_supply.set_output('OFF') 
             time.sleep(2)
             self.continueTest= False
+            self.resultReady.emit((row, -99))
             self.dischargeCaps() #if fails, discharges caps
             time.sleep(1)
             return        
@@ -413,7 +418,7 @@ class Tester(QObject):
                 return 
         self.myResources.lv_supply.set_output('OFF')
         self.status.emit('Failed Test 5: PSUB UVLO Rising - FAIL')
-        self.resultReady.emit((row, np.nan))
+        self.resultReady.emit((row, -88))
         time.sleep(2)
         self.continueTest= False
         self.dischargeCaps() #if fails, discharges caps
@@ -448,7 +453,7 @@ class Tester(QObject):
                 return
         self.myResources.lv_supply.set_output('OFF')
         self.status.emit('Failed Test 6: PSUB UVLO Falling - FAIL')
-        self.resultReady.emit((row, np.nan))
+        self.resultReady.emit((row, -88))
         time.sleep(2)
         self.continueTest= False
         self.dischargeCaps() #if fails, discharges caps
@@ -473,6 +478,7 @@ class Tester(QObject):
             self.status.emit('Failed Test 7: Shorted Inner Diode-PMOS')
             self.myResources.lv_supply.set_output('OFF') 
             time.sleep(2)
+            self.resultReady.emit((row, -99))
             self.continueTest= False
             self.dischargeCaps() #if fails, discharges caps
             return
@@ -498,7 +504,7 @@ class Tester(QObject):
                 return 
         self.myResources.lv_supply.set_output('OFF')
         self.status.emit('Failed Test 7: PSUA OVLO Rising - FAIL')
-        self.resultReady.emit((row, np.nan))
+        self.resultReady.emit((row, -88))
         time.sleep(2)
         self.continueTest= False
         self.dischargeCaps() #if fails, discharges caps
@@ -534,7 +540,7 @@ class Tester(QObject):
                 return
         self.myResources.lv_supply.set_output('OFF')
         self.status.emit('Failed Test 8: PSUB OVLO Falling - FAIL')
-        self.resultReady.emit((row, np.nan))
+        self.resultReady.emit((row, -88))
         time.sleep(2)
         self.continueTest= False
         self.dischargeCaps() #if fails, discharges caps
@@ -733,7 +739,7 @@ class Tester(QObject):
         self.dischargeCaps() #required for discharge after test 14
         load1_on(self.myResources.daq)
         self.status.emit('Running Test 15')
-        time.sleep(1)
+        time.sleep(5)
         quantity_list = list(self.quantities.values())
         self.myResources.daq.setQuantityScan(quantity_list)
         #start_row = 14
