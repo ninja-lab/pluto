@@ -853,8 +853,12 @@ class Tester(QObject):
         load2_on(self.myResources.daq)
         load3_on(self.myResources.daq)
         buck_off(self.myResources.daq) #sets up buck for SPM mode
+        
+        self.myResources.hv_supply.set_rising_voltage_slew('MAX') #100) #50V/sec
+        
         self.myResources.hv_supply.apply(800, 1)
         self.myResources.hv_supply.set_output('ON')
+        time.sleep(.1)
         quantity_list = list(self.quantities.values())
         self.myResources.daq.setQuantityScan(quantity_list)
         #start_row = 32
@@ -923,8 +927,12 @@ class Tester(QObject):
         load2_on(self.myResources.daq)
         load3_on(self.myResources.daq)
         
+        time.sleep(1)
         self.status.emit('Running Test 19')
-        time.sleep(10)
+        buck_on(self.myResources.daq)
+        time.sleep(8)
+        buck_off(self.myResources.daq)
+        time.sleep(1)
         quantity_list = list(self.quantities.values())
         self.myResources.daq.setQuantityScan(quantity_list)
         #start_row = 60
@@ -952,7 +960,7 @@ class Tester(QObject):
         load2_off(self.myResources.daq)
         load3_off(self.myResources.daq)
         row=test.index[0]
-        
+        time.sleep(.2)
         running_values = np.arange(0,10,1, dtype=float)
         self.myResources.hv_supply.apply(290, 1.44)
         
