@@ -8,8 +8,8 @@ Created on Tue Feb  5 10:11:55 2019
 import os
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, qApp, QLabel, QWidget, QMessageBox, QPushButton#, QPixmap, QAction
-from PyQt5.QtCore import pyqtSignal, QThread, QObject
-from PyQt5.QtGui import QIcon, QPixmap #for label
+from PyQt5.QtCore import pyqtSignal#, QThread, QObject
+from PyQt5.QtGui import QPixmap #for label
 import pyvisa
 from datetime import datetime
 from InstrumentConnections import InstrumentConnections
@@ -20,7 +20,7 @@ from PandasModel import PandasModel, HWCHeckerPandasModel
 import Tester
 import SelfTester2
 #import style_strings
-#import PWRTestResources_rc
+import PWRTestResources_rc
 
 qtCreatorFile = "385-0030-RevD-GUI.ui"
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
