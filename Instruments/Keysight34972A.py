@@ -28,6 +28,7 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         self.inst.read_termination = '\n'
         self.sendReset()
         self.set_time(datetime.now())
+        
         '''
         The istrument cannot report what is on the digital output ports, 
         so the info is stored here and kept updated. 
@@ -63,6 +64,7 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         call this first when setting up the instrument. 
         '''
         self.inst.write('CONFigure:VOLTage:DC {}'.format(scan_list))
+        self.inst.write('INPut:IMPedance:AUTO ON')
     
     def configure_ACV_channels(self, scan_list):
         self.inst.write('CONFigure:VOLTage:AC {}'.format(scan_list))
@@ -244,7 +246,23 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         self.inst.write('ROUTe:MONitor (@{})'.format(channel_num))
         time.sleep(.2)
         self.inst.write('ROUTe:MONitor:STATe ON')
-    
+    def configureQuantityDCV(self, alist):
+        '''
+        Take a list of quantity objects, configure all for DCV
+        measurements
+        '''
+        #build a list of channel numbers:
+        channels = [elem.getChannel() for elem in alist]
+        #make a string with commas in between each channel
+        ch_str = ''
+        for ch in channels:
+            ch_str += str(ch) + ','
+        #get rid of last comma
+        ch_str = ch_str[:-1]
+        #put in form required by the instrument
+        scan_list = '(@' + ch_str + ')'
+        self.configure_DCV_channels(scan_list)
+        
     def setQuantityScan(self, alist):
         '''
         Take a list of quantity objects, set the scan list accordingly, use 

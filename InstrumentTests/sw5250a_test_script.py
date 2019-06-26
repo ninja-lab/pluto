@@ -35,7 +35,7 @@ try:
     (ac_supply.read_until_flush())
 except UnboundLocalError:
     pass
-
+'''
 ac_supply.source_voltage(0, 10)
 ac_supply.source_frequency(367, 0)
 ac_supply.set_current_limit(13)
@@ -55,6 +55,6 @@ print(ac_supply.measure_total_power())
 print(ac_supply.measure_total_va())
 ac_supply.output_off()
 
-
+'''
 
 
