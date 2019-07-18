@@ -157,35 +157,21 @@ if form == '0':
         y_ref = float(params[9])
         ser = pd.Series()
         for i in range(num_reads):
-            #print('pass {} start'.format(i))
             start = max_read*i + 1 #1, 250,001, 500,001, ...
             if i == num_reads - 1:
                 stop = memdepth
             else:
                 stop = start + max_read - 1 #250,000, 500,000, 750,000, ...
             scope.write('WAVeform:STARt {}'.format(start))
-            #time.sleep(.2)
-            #print('start: {}'.format(scope.query('WAVeform:STARt?')))
-            #time.sleep(.5)
             scope.write('WAVeform:STOP {}'.format(stop))
-            #time.sleep(.2)
-            #print('stop: {}'.format(scope.query('WAVeform:STOP?')))
-            chunk = scope.inst.query_binary_values(':WAV:DATA?', datatype='B') #returns a list, but could specify df directly?
-            #use lambda? 
-            #time.sleep(5)
-            #scaled_data_y = map(lambda y: (y-y_origin-y_ref)*y_increment, chunk)
+            chunk = scope.inst.query_binary_values(':WAV:DATA?', datatype='B')
             scaled_data_y = [(y-y_origin-y_ref)*y_increment for y in chunk]
             ser = ser.append(pd.Series(scaled_data_y))
-            #print('pass {} end'.format(i))
-            #time.sleep(.5)
-            #data = data[channel].append(pd.Series(scaled_data_y), ignore_index=True)
+    
         data[channel][:] = ser[:]
     
     data['time'] = [x * x_incr for x in range(x_num)] #x_num same as memdepth? 
-    
-    #buff = scope.inst.query_binary_values(':WAV:DATA?', datatype='B')
-    #this next line runs in 0 ns
-    #scaled_data_y = [(y-y_origin-y_ref)*y_increment for y in buff]
+
 elif form == '2':
     '''
     query_ascii_values returns the tmc header in the first element, combined 

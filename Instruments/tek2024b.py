@@ -3,6 +3,7 @@ import numpy as np
 import Visa_Instrument
 import pyvisa
 import copy
+import pandas as pd
 
 class tek2024b(Visa_Instrument.Visa_Instrument):
     """ The class for the Tektronix TPS2024 oscilloscope
@@ -57,7 +58,7 @@ class tek2024b(Visa_Instrument.Visa_Instrument):
 
     def __init__(self, resource, debug=False):
         super().__init__(resource, debug)
-        self.inst.timeout = 5000
+        self.inst.timeout = 10000
 
     def status(self):
         '''
@@ -369,7 +370,41 @@ class tek2024b(Visa_Instrument.Visa_Instrument):
         for ch in list_of_channels:
             self.write('SELect:CH{0} OFF'.format(ch))
             
+    def getChannels(self):
+        '''
+        Returns a length 5 list, with an index being 1 if the corresponding
+        channel number is ON, and 0 if OFF
+        '''
+        st = self.query('SELECT?').split(';')[0:5]
+        return [int(i) for i in st]
+    
+    def capture(self):
+        '''
+        Wrote this function for the GUI Capture tool.
+        return a dataframe with one column for time, and
+        a column for each channel that is selected. 
+        '''
+        adict = {'CH1':None, 'CH2':None, 'CH3':None,'CH4':None, 'MATH':None}
+        alist = self.getChannels()
+        i = 0
+        df = pd.DataFrame()
 
+        for key in adict:
+       
+            if alist[i]==1:
+                atten = self.query('CH{}:PRObe?'.format(i+1))
+                yunit = self.query('CH{}:YUnit?'.format(i+1))
+                adict[key] = channel(self, i+1, yunit, atten)      
+            i+=1
+        for key in adict:
+            if adict[key] is not None:
+                adict[key].set_waveformParams()
+                time, yvals = adict[key].get_waveform(debug=False, wait=False)
+                df[key] = yvals
+                
+        df['time'] = time
+        return df
+                
 def get_channels_autoRange(channels, wait=True, averages=False, max_adjustments=5):
     """ Helper function to control the adjustment of multiple channels between
     captures.
@@ -751,6 +786,6 @@ class channel(tek2024b):
             print("WARNING: Data payload possibly contained clipped points")
             print("=======================================================")
             print()
-
+        print('done')
         return data_x, data_y
 

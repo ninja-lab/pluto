@@ -30,22 +30,22 @@ for resource_id in tup :
         pass
 
 #ch1 = tek2024b.channel(scope, 1, atten=10)
-ch2 = tek2024b.channel(scope, 2, atten=10)
-ch3 = tek2024b.channel(scope, 3, atten=100)
-#ch4 = tek2024b.channel(scope, 4, atten=10)
+#ch2 = tek2024b.channel(scope, 2, atten=10)
+#ch3 = tek2024b.channel(scope, 3, atten=100)
+ch4 = tek2024b.channel(scope, 4, atten=10)
 #ch1.set_waveformParams()
-ch2.set_waveformParams()
-ch3.set_waveformParams()
-#ch4.set_waveformParams()
+#ch2.set_waveformParams()
+#ch3.set_waveformParams()
+ch4.set_waveformParams()
 
 #psua_time, psua = ch1.get_waveform(debug=False, wait=False)
-time1, step_in = ch2.get_waveform(debug=False, wait=False)
-time2, tp9_response  = ch3.get_waveform(debug=False, wait=False)
+#time1, step_in = ch2.get_waveform(debug=False, wait=False)
+time1, tp9_response  = ch4.get_waveform(debug=False, wait=False)
 #vout_time, vout = ch4.get_waveform(debug=False, wait=False)
 timeStamp = datetime.now().strftime('-%m_%d_%Y_%H_%M')
-df = pd.DataFrame(data = {'time1': time1, 'input': step_in, 'time2':time2, 'tp9_response': tp9_response})
-save_loc = 'C:\\Users\\Erik\\Dropbox (Amber Kinetics)\\Engineering\\Electrical\\PCBs\\Motherboard\\'
-df.to_csv(path_or_buf=save_loc+'tp10'+timeStamp+'.csv')
+#df = pd.DataFrame(data = {'time1': time1, 'input': step_in, 'time2':time2, 'tp9_response': tp9_response})
+#save_loc = 'C:\\Users\\Erik\\Dropbox (Amber Kinetics)\\Engineering\\Electrical\\PCBs\\Motherboard\\'
+#df.to_csv(path_or_buf=save_loc+'tp10'+timeStamp+'.csv')
 
 
 
