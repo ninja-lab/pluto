@@ -1,4 +1,4 @@
-import serialInstrument
+#import serialInstrument
 import tek2024b
 import pyvisa
 import matplotlib.pyplot as plt
