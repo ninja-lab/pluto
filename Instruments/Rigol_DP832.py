@@ -48,7 +48,8 @@ class Rigol_DP832(Visa_Instrument.Visa_Instrument):
         
     def get_voltage(self, channel):
         return float(self.query(':MEASure:VOLTage:DC? CH{0}'.format(channel)))
-        
+    def get_current(self, channel):
+        return float(self.query(':MEASure:CURRent:DC? CH{0}'.format(channel)))
     def set_increment(self, channel, increment):
         self.write('SOURce{channel}:VOLTage:LEVel:IMMediate:STEP:INCRement {increment}'.format(channel=channel, increment = increment))
     def increment_up(self, channel):
