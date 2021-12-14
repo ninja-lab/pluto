@@ -24,5 +24,10 @@ class sdm3045x(Visa_Instrument.Visa_Instrument):
     
     def measure_current(self):
         return float(self.query('MEASure:CURRent:DC?'))
+    
+    def measure_resistance(self):
+        return float(self.query('MEASure:RESistance?'))
+    
+    
         
         

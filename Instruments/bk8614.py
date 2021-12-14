@@ -139,4 +139,16 @@ class bk8614(Visa_Instrument.Visa_Instrument):
 
         '''
         self.write(f':SENSe:AVERage:COUNt {samples}')
-        
+    
+    def set_sense(self, val):
+        '''
+        Parameters
+        ----------
+        val : 0|1|ON|OFF
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.write(f':SOURCe:SENSE {val}')
