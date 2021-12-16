@@ -58,7 +58,33 @@ class Worker(QObject):
         ScopePattern = re.compile('RIGOL TECHNOLOGIES,DS1104Z')
         rm = pyvisa.ResourceManager()
         tup =  rm.list_resources()
+        for resource_id in tup :
+            try:
+                inst = rm.open_resource(resource_id, send_end=True)
+                name_str = inst.query('*IDN?').strip()
+                if ScopePattern.match(name_str) is not None:
+                    print(name_str)
+                    self.scope = rigol_ds1054z(inst)
+                    print('Connected to: {}'.format(name_str))
+                if name_str == instrument_strings.sdm3045x_2:
+                    self.RLmeter = sdm3045x.sdm3045x(inst)
+                    print("Connected to: " + self.RLmeter.name.rstrip('\n'))
+                if name_str == instrument_strings.sdm3045x_4:
+                    self.SSmeter = sdm3045x.sdm3045x(inst)
+                    print("Connected to: " + self.SSmeter.name.rstrip('\n'))
+            except pyvisa.errors.VisaIOError:
+                pass
+        #sw node is channel 1
+        self.scope.setup_channel(channel=1,on=1,offset_divs=-2.0, volts_per_div=10.0)
+        #RLVout channel 
+        self.scope.setup_channel(channel=2,on=1,offset_divs=0,volts_per_div=10.0)
+        #SSVout channel 
+        self.scope.setup_channel(channel=3,on=1,offset_divs=0,volts_per_div=10.0)
         
+        self.scope.setup_timebase(time_per_div='5us',delay='0us')
+        self.scope.setup_mem_depth(memory_depth=6e3)
+        self.scope.setup_trigger(channel=1,slope_pos=1,level='5v')
+        self.scope.repeat_trigger()
         return 
     '''
 https://stackoverflow.com/questions/25995305/pyqt-code-is-blocking-although-moved-to-a-different-qthread?rq=1
@@ -68,7 +94,7 @@ https://stackoverflow.com/questions/25995305/pyqt-code-is-blocking-although-move
         self.timer.start()
         
     def update_vals(self):
-        '''
+        
         RLrms = self.scope.get_measurement(channel=2, meas_type=self.scope.rms_voltage)
         SSrms = self.scope.get_measurement(channel=3, meas_type=self.scope.rms_voltage)
         RLtemp = round(meas_temp(self.RLmeter),1)
@@ -87,7 +113,7 @@ https://stackoverflow.com/questions/25995305/pyqt-code-is-blocking-although-move
         self.SS_power.emit(2)
         self.RL_temp.emit(3)
         self.SS_temp.emit(5)
-       
+        '''
 
 class MyApp(QMainWindow, Ui_MainWindow):
     
