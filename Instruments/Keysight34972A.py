@@ -14,7 +14,8 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
     The read() command places the instrument in the wait-for-trigger state determined by set_trigger(), and
     once triggered and measurements are complete, they are sent to the PC. 
     
-    Alternatively, using INIT takes measurements when the trigger is received, but not sent to the PC until FETCh()
+    Alternatively, using INIT takes measurements when the trigger is received,
+    but not sent to the PC until FETCh()
     is called. 
     
     To change the integration time (the number of power line cycles), you must 
@@ -25,7 +26,7 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
     def __init__(self, resource, debug=False):
         super().__init__(resource, debug)
         self.inst.timeout = 5000
-        self.inst.read_termination = '\n'
+        self.inst.read_termination = '\r\n'
         self.sendReset()
         self.set_time(datetime.now())
         
@@ -55,6 +56,22 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         return round(float(val),2)
     
     def measure_temp(self, channel_num, probe_type='TCouple', thermocouple='K'):
+        '''
+        this function takes 137ms to return. 
+
+        Parameters
+        ----------
+        channel_num : the channel you want to measure
+        probe_type : TYPE, optional
+            DESCRIPTION. The default is 'TCouple'.
+        thermocouple : TYPE, optional
+            DESCRIPTION. The default is 'K'.
+
+        Returns
+        -------
+        the temperature 
+
+        '''
         temp_str = self.inst.query('MEASure:TEMPerature? {0}, {1}, (@{2})'.format(probe_type, thermocouple,channel_num))
         return round(float(temp_str),4)
     
@@ -79,6 +96,8 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
         '''
         The scan list is in the form of (@202:207, 209, 302:308) 
         That example includes channels 202 through 207, 209, and 302 through 308 in the scan list. 
+        
+        Note the parenthesis and the @ symbol
         '''
         self.inst.write('ROUTe:SCAN {}'.format(scan_list))
         self.inst.write('ROUTe:CHANnel:DELay:AUTO ON')
@@ -134,6 +153,11 @@ class Keysight34972A(Visa_Instrument.Visa_Instrument):
     def read(self):
         ''' Same as an INITiate command immediately followed with a FETCh
          Returns a list of floats corresponding to data from the channels in the scan list 
+         
+         This took:
+             48ms for a single channel with NPLC = MIN
+             80ms for a single channel with NPLC = 1
+             112ms for a single channel with NPLC = 2
         '''
         data = self.inst.query('READ?')
         return [float(el) for el in data.split(',')]

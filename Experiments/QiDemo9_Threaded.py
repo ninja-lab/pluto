@@ -10,6 +10,7 @@ import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5 import uic
 from PyQt5.QtCore import pyqtSignal, QTimer, QThread, QObject
+from scipy import interpolate
 '''
 Rigol Scope:
 '''
@@ -17,18 +18,38 @@ from rigol_ds1054z import rigol_ds1054z
 import sdm3045x
 import pyvisa
 import re
+import pandas as pd
 from datetime import datetime
 import instrument_strings
 from math import exp, log
+
+RLtemp_list = []
+SStemp_list = []
 
 beta = 3892 #PS103J2 thermistor
 r_o = 10e3
 t_o = 25
 r_inf = r_o*exp(-beta/t_o)
 
-def meas_temp(meter):
-    return beta/log(meter.measure_resistance()/r_inf)
+# def meas_temp(meter):
+#     res = meter.measure_resistance()
+#     print(res)
+#     return beta/log(res/r_inf)
     
+# def meas_temp(meter):
+#     R = meter.measure_resistance()
+#     mu1 = 5579.51717676452
+#     mu2 = 4902.82313965069
+#     p = [0.0953777064727060,-1.02775949386833,4.24523578150887,-8.03909876318775,
+#          7030623504828,1.03402905548280	,-0.00828671441737146,-7.58247197203019,12.2964652728744,
+#          -21.6985739156885,
+#          38.7852077865839]
+#     x = (R-mu1)/mu2
+#     T = p[0]*x**10 + p[1]*x**9 + p[2]*x**8 + p[3]*x**7 + p[4]*x**6 + p[5]*x**5 + p[6]*x**4 + p[7] * x**3 + p[8] * x**2 + p[9] * x + p[10]
+    
+#     return T
+
+
 def calc_power(vout):
     RLoad = 8.4 #ohms
     return round(vout**2/RLoad,3)
@@ -53,8 +74,7 @@ class Worker(QObject):
     def __init__(self):
         QObject.__init__(self)
         self.timer = QTimer()
-        self.timer.setInterval(1000) #mSec
-   
+        self.timer.setInterval(250) #mSec
         ScopePattern = re.compile('RIGOL TECHNOLOGIES,DS1104Z')
         rm = pyvisa.ResourceManager()
         tup =  rm.list_resources()
@@ -74,17 +94,21 @@ class Worker(QObject):
                     print("Connected to: " + self.SSmeter.name.rstrip('\n'))
             except pyvisa.errors.VisaIOError:
                 pass
-        #sw node is channel 1
+        #gate signal is channel 1
         self.scope.setup_channel(channel=1,on=1,offset_divs=-2.0, volts_per_div=10.0)
-        #RLVout channel 
+        #RLVout channel 2
         self.scope.setup_channel(channel=2,on=1,offset_divs=0,volts_per_div=10.0)
-        #SSVout channel 
+        #SSVout channel 3
         self.scope.setup_channel(channel=3,on=1,offset_divs=0,volts_per_div=10.0)
         
         self.scope.setup_timebase(time_per_div='5us',delay='0us')
         self.scope.setup_mem_depth(memory_depth=6e3)
         self.scope.setup_trigger(channel=1,slope_pos=1,level='5v')
         self.scope.repeat_trigger()
+        df2 = pd.read_csv('PS103J2_RT_Table.csv')
+        temps = df2['temp']
+        res = df2['resistance']
+        self.f = interpolate.interp1d(res, temps)
         return 
     '''
 https://stackoverflow.com/questions/25995305/pyqt-code-is-blocking-although-moved-to-a-different-qthread?rq=1
@@ -93,12 +117,20 @@ https://stackoverflow.com/questions/25995305/pyqt-code-is-blocking-although-move
         self.timer.timeout.connect(self.update_vals)
         self.timer.start()
         
+    def meas_temp(self,meter):
+        R = meter.measure_resistance()
+        return float(self.f(R))
+        
     def update_vals(self):
         
         RLrms = self.scope.get_measurement(channel=2, meas_type=self.scope.rms_voltage)
         SSrms = self.scope.get_measurement(channel=3, meas_type=self.scope.rms_voltage)
-        RLtemp = round(meas_temp(self.RLmeter),1)
-        SStemp = round(meas_temp(self.SSmeter),1)
+        RLtemp = round(self.meas_temp(self.RLmeter),2)
+        SStemp = round(self.meas_temp(self.SSmeter),2)
+        
+        RLtemp_list.append(RLtemp)
+        SStemp_list.append(SStemp)
+        
         self.RL_power.emit(calc_power(RLrms))
         self.SS_power.emit(calc_power(SSrms))
         self.RL_temp.emit(RLtemp)
@@ -121,7 +153,7 @@ class MyApp(QMainWindow, Ui_MainWindow):
         QMainWindow.__init__(self,)
         Ui_MainWindow.__init__(self)
         self.setupUi(self)
-        self.setGeometry(50, 50, 400, 400)
+        self.setGeometry(50, 50, 600, 400)
         
         self.thread = QThread()
         self.worker = Worker()

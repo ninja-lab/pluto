@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Dec  8 10:52:57 2021
+Created on Wed Dec 22 14:02:42 2021
 
 @author: eriki
 """
@@ -58,6 +58,7 @@ SENSORS
 5. coil shielded junction, shielded cable, 5TC-TT-K-40-36-ROHS type K
 6. coil unshielded junction, shielded cable 5TC-TT-K-40-36-ROHS type K
 7. high side diode D5_HBa2 5TC-TT-K-40-36-ROHS type K
+7. under board next to U16_HBa1 (sensor 11)
 8. unshielded back of aluminum, type K Reed 
 9. thermistor back of aluminum PS103J2
 10. TP25 SW1_temp (bottom half)
@@ -90,7 +91,7 @@ ul.set_config(InfoType.BOARDINFO, board_num, sensor8, BoardInfo.CHANTCTYPE, TcTy
 ul.set_config(InfoType.BOARDINFO, board_num, sensor7, BoardInfo.CHANTCTYPE, TcType.K)
 
 rm = pyvisa.ResourceManager()
-
+'''
 for resource_id in rm.list_resources():
     try:
         inst = rm.open_resource(resource_id, send_end=True) #the VISA resource
@@ -107,7 +108,7 @@ for resource_id in rm.list_resources():
             print("Connected to: " + supply.name.rstrip('\n'))
     except pyvisa.errors.VisaIOError:
         print(resource_id + " is not what we're looking for, continuing...\n")
-
+'''
 ai_info = daq_dev_info.get_ai_info()
 ai_range = ai_info.supported_ranges[0]
 def meas_sensor8():
@@ -143,113 +144,123 @@ title_str = 'ORMthermal1'
 name = title_str + time_stamp
 filename = save_loc + name.replace(' ','_') +'.csv'
 
-sensor1data = []
-sensor7data = []
-sensor10data = []
-sensor11data = []
-sensor12data = []
-sensor13data = []
-sensor8data = []
-seconds_elapsed = []
-voutdata = []
-ioutdata = []
-vindata = []
-iindata = []
-stamps = []
-start = datetime.now()
-load.turn_off()
-#get quiescent values first 
 
-for i in range(5):
-    sensor1data.append(meas_sensor1())
-    sensor7data.append(meas_sensor7())
-    sensor10data.append(meas_sensor10())
-    sensor11data.append(meas_sensor11())
-    sensor12data.append(meas_sensor12())
-    sensor13data.append(meas_sensor13())
-    sensor8data.append(meas_sensor8())
-    voutdata.append(0)
-    ioutdata.append(0)
-    vindata.append(0)
-    iindata.append(0)
+'''
+Only change these next two variables
+'''
+ramptime = 500
+fast_sampling_time = 10 #sample really fast for 10 seconds after turnoff
+#######
+numchannels = 6
+sampletime = numchannels*7e-3 #7ms/sample to poll a single channel , 3 channels used
+fastdwelltime = 50e-3 #sleep time in each loop
+slowdwelltime = 500e-3
+num_fast_samples = fast_sampling_time / (sampletime+fastdwelltime)
+num_slow_samples = 2*ramptime / (sampletime + slowdwelltime) 
+est_samples = int(num_fast_samples + num_slow_samples)
+quiescent_samples = 5
+rampsamples = int((est_samples-quiescent_samples)/2)
+
+sensor7data = np.zeros(est_samples)
+sensor12data = np.zeros(est_samples)
+sensor8data = np.zeros(est_samples)
+sensor13data = np.zeros(est_samples)
+sensor10data = np.zeros(est_samples)
+sensor11data = np.zeros(est_samples)
+seconds_elapsed = np.zeros(est_samples)
+voutdata = np.zeros(est_samples)
+ioutdata = np.zeros(est_samples)
+vindata = np.zeros(est_samples)
+iindata = np.zeros(est_samples)
+stamps = np.ndarray(est_samples, dtype=object)
+start = datetime.now()
+#load.turn_off()
+
+#get quiescent values first 
+for i in range(quiescent_samples):
+ 
+    sensor7data[i] = meas_sensor7()
+    sensor12data[i] = meas_sensor12()
+    sensor8data[i] = meas_sensor8()
+    sensor13data[i] = meas_sensor13()
+    sensor10data[i] = meas_sensor10()
+    sensor11data[i] = meas_sensor11()
+    
     print(f'i = {i}')
-    print(f'sensor1: {sensor1data[-1]:.2f}')
-    print(f'sensor7: {sensor7data[-1]:.2f}')
-    print(f'sensor10: {sensor10data[-1]:.2f}')
-    print(f'sensor11: {sensor11data[-1]:.2f}')
-    print(f'sensor12: {sensor12data[-1]:.2f}')
-    print(f'sensor13: {sensor13data[-1]:.2f}')
+    print(f'sensor7: {sensor7data[i]:.2f}')
+    print(f'sensor12: {sensor12data[i]:.2f}')
     print()
     stamp = datetime.now()
-    stamps.append(stamp.strftime('%Y-%m-%d %H:%M:%S'))
-    seconds_elapsed.append((stamp - start).seconds)
-    time.sleep(.8)
-    
-load.set_current(6.1)
+    stamps[i] = stamp.strftime('%Y-%m-%d %H:%M:%S')
+    seconds_elapsed[i] = (stamp - start).total_seconds()
+    time.sleep(.1)
+'''
+load.set_current(7.5)
 load.turn_on()
-time.sleep(1)
-supply.apply(150, 3)
+supply.apply(0, 4)
 supply.turn_on()
 
-for i in range(150):
-    sensor1data.append(meas_sensor1())
-    sensor7data.append(meas_sensor7())
-    sensor10data.append(meas_sensor10())
-    sensor11data.append(meas_sensor11())
-    sensor12data.append(meas_sensor12())
-    sensor13data.append(meas_sensor13())
-    sensor8data.append(meas_sensor8())
-    voutdata.append(load.measure_voltage())
-    ioutdata.append(load.measure_current())
-    vindata.append(supply.measure_voltage())
-    iindata.append(supply.measure_current())
-    print(f'i = {i}')
-    print(f'sensor1: {sensor1data[-1]:.2f}')
-    print(f'sensor7: {sensor7data[-1]:.2f}')
-    print(f'sensor10: {sensor10data[-1]:.2f}')
-    print(f'sensor11: {sensor11data[-1]:.2f}')
-    print(f'sensor12: {sensor12data[-1]:.2f}')
-    print(f'sensor13: {sensor13data[-1]:.2f}')
-    print()
+
+for i in np.linspace(0, 1, 5):
+    supply.apply(int(i*150), 4)
+    time.sleep(.3)
+'''
+for i in range(quiescent_samples, quiescent_samples+rampsamples):
     stamp = datetime.now()
-    stamps.append(stamp.strftime('%Y-%m-%d %H:%M:%S'))
-    seconds_elapsed.append((stamp - start).seconds)
-    time.sleep(.8)
-
-supply.turn_off()
-
-for i in range(150):
-    sensor1data.append(meas_sensor1())
-    sensor7data.append(meas_sensor7())
-    sensor10data.append(meas_sensor10())
-    sensor11data.append(meas_sensor11())
-    sensor12data.append(meas_sensor12())
-    sensor13data.append(meas_sensor13())
-    sensor8data.append(meas_sensor8())
-    voutdata.append(0)
-    ioutdata.append(0)
-    vindata.append(0)
-    iindata.append(0)
-    print(f'i = {i}')
-    print(f'sensor1: {sensor1data[-1]:.2f}')
-    print(f'sensor7: {sensor7data[-1]:.2f}')
-    print(f'sensor10: {sensor10data[-1]:.2f}')
-    print(f'sensor11: {sensor11data[-1]:.2f}')
-    print(f'sensor12: {sensor12data[-1]:.2f}')
-    print(f'sensor13: {sensor13data[-1]:.2f}')
+    sensor7data[i] = meas_sensor7() #7ms
+    sensor12data[i] = meas_sensor12() #7ms
+    sensor8data[i] = meas_sensor8() #7ms
+    sensor13data[i] = meas_sensor13() #7ms
+    sensor10data[i] = meas_sensor10() #4ms
+    sensor11data[i] = meas_sensor11() #4ms
+#    voutdata[i] = load.measure_voltage() # .5ms
+#    ioutdata[i] = load.measure_current() # .5ms
+#    vindata[i] = supply.measure_voltage() #6.6ms
+#    iindata[i] = supply.measure_current() #6.4ms
+    #all queries together take 57ms
+    print(f'i = {i} of {rampsamples}')
+    print(f'sensor7: {sensor7data[i]:.2f}')
+    print(f'sensor12: {sensor12data[i]:.2f}')
     print()
+    
+    
+    stamps[i] = stamp.strftime('%Y-%m-%d %H:%M:%S')
+    seconds_elapsed[i] = (stamp - start).total_seconds()
+    time.sleep(slowdwelltime)
+
+#supply.turn_off()
+#load.turn_off()
+
+for i in range(quiescent_samples + rampsamples, est_samples):
     stamp = datetime.now()
-    stamps.append(stamp.strftime('%Y-%m-%d %H:%M:%S'))
-    seconds_elapsed.append((stamp - start).seconds)
-    time.sleep(.8)
+    sensor7data[i] = meas_sensor7()
+    sensor12data[i] = meas_sensor12()
+    sensor8data[i] = meas_sensor8()
+    sensor13data[i] = meas_sensor13() #7ms
+    sensor10data[i] = meas_sensor10() #4ms
+    sensor11data[i] = meas_sensor11() #4ms
+    print(f'i = {i}')
+    print(f'sensor7: {sensor7data[i]:.2f}')
+    print(f'sensor12: {sensor12data[i]:.2f}')
+    print()
     
-load.turn_off()
+    stamps[i] = stamp.strftime('%Y-%m-%d %H:%M:%S')
+    seconds_elapsed[i] = (stamp - start).total_seconds()
+    if (i-(quiescent_samples + rampsamples)) > num_fast_samples:
+        time.sleep(slowdwelltime)
+    else: 
+        time.sleep(fastdwelltime)
+    
+    
+#load.turn_off()
 
 
     
-df = pd.DataFrame(data = {'time': stamps, 'sensor1':sensor1data,'sensor7':sensor7data, 'sensor10': sensor10data,
-                          'sensor11': sensor11data,'sensor12':sensor12data, 'sensor8':sensor8data,
-                          'sensor13':sensor13data, 'vin': vindata, 'iin': iindata,
+df = pd.DataFrame(data = {'time': stamps, 'sensor7':sensor7data, 
+                          'sensor12':sensor12data, 'sensor8':sensor8data,
+                          'sensor10':sensor10data, 'sensor11':sensor11data,
+                          'sensor13':sensor13data,
+                           'vin': vindata, 'iin': iindata,
                           'vout': voutdata, 'iout': ioutdata,
                           'seconds':seconds_elapsed})
 df.to_csv(path_or_buf=filename)

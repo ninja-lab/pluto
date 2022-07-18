@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Sep  1 17:29:12 2021
+Created on Fri Jul 15 10:48:56 2022
 
 @author: eriki
 """
@@ -8,7 +8,7 @@ Created on Wed Sep  1 17:29:12 2021
 import Visa_Instrument
 import time
 
-class chroma63003(Visa_Instrument.Visa_Instrument):
+class chroma63218a(Visa_Instrument.Visa_Instrument):
     
     '''
     Constant voltage Ranges: 
@@ -17,19 +17,19 @@ class chroma63003(Visa_Instrument.Visa_Instrument):
         80 <= Hi <= 150
     
     Constant current Ranges: 
-        Low <= 20
-        20 <= Med <= 4
-        4 <= Hi <= 40
+        Low <= 180
+        180 <= Med <= 900
+        900 <= Hi <= 1800
     
     Constant resistance ranges: 
-        .075 <= Low <= 375
-        25 <= Med <= 1875
-        90 <= Hi <= 3750
+        1.7mOhm <= Low <= 16.67 Ohm (16V)
+        6.7mOhm <= Med <= 66.67 Ohm (80V)
+        .167 <= Hi <= 333 Ohm (150V)
         
     Constant Power 
-        Low <= 5
-        5 <= Med <= 25
-        25 <= Hi <= 250
+        Low <= 1800
+        1800 <= Med <= 9kW
+        9kW <= Hi <= 18kW
         
     '''
     
@@ -42,7 +42,7 @@ class chroma63003(Visa_Instrument.Visa_Instrument):
     
     def turn_off(self):
         self.write('LOAD:STATe OFF')
-        
+
     def short(self, b):
         '''
         
@@ -174,6 +174,15 @@ class chroma63003(Visa_Instrument.Visa_Instrument):
         return float(self.query(':MEASure:VOLTage?'))
     def measure_power(self):
         return float(self.query(':MEASure:POWer?'))
+    
+    def set_mode(self, mode):
+        '''
         
-            
-       
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.write(f':MODE {mode}' )
+        

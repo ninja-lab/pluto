@@ -33,7 +33,23 @@ class dl3031a(Visa_Instrument.Visa_Instrument):
 
         '''
         return float(self.query(':MEASure:CURRent:DC?'))
-    
+    def set_slew(self, slew):
+        '''
+        
+
+        Parameters
+        ----------
+        slew : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.write(f':SOURce:CURRent:SLEW:BOTH {slew}')
+    def set_range(self):
+        self.write(':SOURCe:CURRent:RANGe MAX')
     def measure_power(self):
         return float(self.query('MEASure:POWer:DC?'))
     
