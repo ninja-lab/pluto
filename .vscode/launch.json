@@ -1,11 +1,20 @@
 {
   "version": "0.2.0",
   "configurations": [
+    
     {
-      "name": "Rigol DSA815 test",
+      "name": "Run active InstrumentTests module",
       "type": "debugpy",
       "request": "launch",
-      "module": "InstrumentTests.rigol_DSA815_test_script",
+      "module": "InstrumentTests.${fileBasenameNoExtension}",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Run active Experiments module",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "Experiments.${fileBasenameNoExtension}",
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
     }

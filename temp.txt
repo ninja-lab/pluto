@@ -38,12 +38,4 @@ f_start = spec_an.get_start_freq()   # Hz
 f_stop  = spec_an.get_stop_freq()    # Hz
 freqs = np.linspace(f_start, f_stop, len(data))
 
-# Plot vs. MHz
-plt.figure()
-plt.plot(freqs / 1e6, data)
-plt.xlabel("Frequency (MHz)")
-plt.ylabel("Amplitude (dBuV)")  
-plt.title("Baseline Noise Floor")
-plt.grid(True)
-plt.tight_layout()
-plt.show()
+
