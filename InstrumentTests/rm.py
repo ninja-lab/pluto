@@ -19,5 +19,5 @@ print(rm.list_resources())
 #s.query('*IDN?') #tried with \n too, it just times out
 #print(s.query('*IDN?'))
 
-meter = rm.open_resource(rm.list_resources()[1])
+meter = rm.open_resource(rm.list_resources()[0])
 print(meter.query('*IDN?'))

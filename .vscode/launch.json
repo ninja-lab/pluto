@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Rigol DSA815 test",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "InstrumentTests.rigol_DSA815_test_script",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    }
+  ]
+}
